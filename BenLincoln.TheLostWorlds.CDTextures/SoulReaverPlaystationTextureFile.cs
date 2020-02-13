@@ -191,7 +191,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             {
                 if (_PolygonData != null)
                 {
-                    _Textures[index] = _GetTextureAsBitmap(index, _PolygonData, false, true);
+                    _Textures[index] = _GetTextureAsBitmap(index, _PolygonData, true, true);
                 }
                 else
                 {
@@ -549,7 +549,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             Bitmap tex = new Bitmap(1, 1);
             if (_Textures[index] == null)
             {
-                tex = _GetTextureAsBitmap(index, GetGreyscalePalette());
+                tex = _GetTextureAsBitmap(index);
             }
             else
             {

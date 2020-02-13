@@ -48,6 +48,7 @@ namespace Only_Skin_Deep
 
     public struct BatchExportParameters
     {
+        public string outputFolder;
         public Hashtable FileList;
         public bool ExportAllMipMaps;
     }
@@ -57,6 +58,76 @@ namespace Only_Skin_Deep
         protected CDT.TextureFile _File;
         protected frmAbout _AboutWindow;
         protected BLUI.ProgressWindow _ProgressWindow;
+
+        protected enum ExportResultType
+        {
+            Success,
+            Failure,
+            Invalid,
+            Missing
+        }
+
+        protected enum FileType
+        {
+            Texture,
+            Object
+        }
+
+        protected struct ExportResult
+        {
+            public ExportResultType ResultType;
+            public FileType FileType;
+            public String FileName;
+            public static void AddToList(List<ExportResult> list, ExportResultType resultType, FileType fileType, String fileName)
+            {
+                if (list == null)
+                {
+                    return;
+                }
+
+                ExportResult result = new ExportResult();
+                result.ResultType = resultType;
+                result.FileType = fileType;
+                result.FileName = fileName;
+                if (list != null)
+                {
+                    list.Add(result);
+                }
+            }
+            public String GetMessage()
+            {
+                String result = "";
+                String fileType = "";
+
+                switch (ResultType)
+                {
+                    case ExportResultType.Success:
+                        result = "Read ";
+                        break;
+                    case ExportResultType.Missing:
+                        result = "Missing ";
+                        break;
+                    case ExportResultType.Failure:
+                        result = "Bad ";
+                        break;
+                    default:
+                        result = "Unsupported ";
+                        break;
+                }
+
+                switch (FileType)
+                {
+                    case FileType.Object:
+                        fileType = "object file - ";
+                        break;
+                    default:
+                        fileType = "texture file - ";
+                        break;
+                }
+
+                return result + fileType + "\"" + FileName + "\"";
+            }
+        }
 
         public frmMain(string[] args)
         {
@@ -183,18 +254,8 @@ namespace Only_Skin_Deep
                 {
                     pictureBox.Image = null;
                 }
-
-                //directXView.Width = rect.Width;
-                //directXView.Height = rect.Height;
-                //Microsoft.DirectX.Direct3D.Texture texture = _File.GetTexture(directXView.GetDevice(), index);
-                //directXView.SetTexture(texture, rect);
             }
-            catch
-            {
-                //rect.Width = 255;
-                //rect.Height = 255;
-                //directXView.SetTexture(null, rect);
-            }
+            catch { }
         }
 
         #endregion
@@ -300,7 +361,7 @@ namespace Only_Skin_Deep
 
             Hashtable fileList = new Hashtable();
             fileList = GetBatchProcessFileList(fileList, inFolderBase, inFolderBase, outFolderBase, recurseInput, recurseOutput);
-
+            parms.outputFolder = outFolderBase;
             parms.FileList = fileList;
             parms.ExportAllMipMaps = false;
 
@@ -338,9 +399,9 @@ namespace Only_Skin_Deep
             {
                 throw new InvalidCastException("Passed value must be an instance of BatchExportParameters.");
             }
+
             Hashtable fileList = parms.FileList;
-            Hashtable failures = new Hashtable();
-            List<string> colourMessages = new List<string>();
+            List<ExportResult> exportResults = new List<ExportResult>();
 
             int currentFile = 1;
             foreach (string inputFile in fileList.Keys)
@@ -350,16 +411,10 @@ namespace Only_Skin_Deep
                 {
                     Directory.CreateDirectory(outFolder);
                 }
+
                 try
                 {
-                    LoadFile(inputFile);
-
-                    try
-                    {
-                        String objectFileName = Path.GetDirectoryName(inputFile) + @"\" + Path.GetFileNameWithoutExtension(inputFile) + ".pcm";
-                        ImportColoursFromObject(objectFileName, colourMessages);
-                    }
-                    catch (Exception) { }
+                    LoadTextures(inputFile, exportResults);
 
                     Thread exportThread = new Thread(ExportAll);
                     ExportParameters outParms = new ExportParameters();
@@ -374,28 +429,65 @@ namespace Only_Skin_Deep
                         Thread.Sleep(10);
                     }
                 }
-                catch (Exception ex)
-                {
-                    failures.Add(inputFile, ex.Message);
-                }
+                catch { }
+
                 currentFile++;
             }
 
-            if (colourMessages.Count > 0)
+            if (exportResults.Count > 0)
             {
-                DialogResult result = MessageBox.Show("Error importing colours. Some textures may be shown in greyscale.\r\n\r\n" +
-                    "Would like to view the logfile?", "Export Error",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                int noOfErrors = 0;
+                int noOfColourErrors = 0;
+                foreach (ExportResult exportResult in exportResults)
+                {
+                    if (exportResult.ResultType != ExportResultType.Success)
+                    {
+                        noOfErrors++;
+
+                        if (exportResult.FileType == FileType.Object)
+                        {
+                            noOfColourErrors++;
+                        }
+                    }
+                }
+
+                String summary = "Batch export completed with " + noOfErrors.ToString() + " errors.";
+                if (noOfColourErrors > 0)
+                {
+                    summary += " As a result, some textures may be shown in greyscale.";
+                }
+                summary += "\r\n\r\nView the logfile?";
+
+                DialogResult result =
+                    MessageBox.Show(summary, "Export Complete", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
                 if (result == DialogResult.Yes)
                 {
-                    String logFileName = Path.GetTempFileName();
-                    StreamWriter logFile = File.CreateText(logFileName);
-                    foreach (String message in colourMessages)
+                    int noOfAttempts = 0;
+                    while (noOfAttempts < 100)
                     {
-                        logFile.WriteLine(message);
+                        DateTime date = DateTime.Now;
+                        String dateFormat = "yyyy-MM-dd-HH-mm-ss-fff-";
+                        String dateString = date.ToString(dateFormat);
+                        Random randomGen = new Random((int)date.Ticks);
+                        int randomVal = randomGen.Next();
+                        String logFileName = parms.outputFolder + "\\OnlySkinDeep-Log-" + dateString + randomVal.ToString("X8") + ".txt";
+                        try
+                        {
+                            StreamWriter logFile = File.CreateText(logFileName);
+                            foreach (ExportResult exportResult in exportResults)
+                            {
+                                logFile.WriteLine(exportResult.GetMessage());
+                            }
+                            logFile.Close();
+                            //System.Diagnostics.Process.Start("notepad.exe", logFileName);
+                            System.Diagnostics.Process.Start(logFileName);
+                            break;
+                        }
+                        catch
+                        {
+                            noOfAttempts++;
+                        }
                     }
-                    logFile.Close();
-                    System.Diagnostics.Process.Start("notepad.exe", logFileName);
                 }
             }
         }
@@ -457,31 +549,14 @@ namespace Only_Skin_Deep
 
         protected void OpenFile(string path)
         {
-            bool openSuccess = true;
-            string failureReason = "";
-            try
-            {
-                LoadFile(path);
-            }
-            catch (Exception ex)
-            {
-                openSuccess = false;
-                failureReason = ex.Message;
-            }
+            List<ExportResult> exportResults = new List<ExportResult>();
+            LoadTextures(path, exportResults);
 
             lvTextureList.Items.Clear();
 
+            bool openSuccess = (exportResults.Count > 0 && exportResults[0].ResultType == ExportResultType.Success);
             if ((openSuccess) && (_File != null))
             {
-                List<string> colourMessages = new List<string>();
-
-                try
-                {
-                    String objectFileName = Path.GetDirectoryName(path) + @"\" + Path.GetFileNameWithoutExtension(path) + ".pcm";
-                    ImportColoursFromObject(objectFileName, colourMessages);
-                }
-                catch (Exception) { }
-
                 btnSave.Enabled = true;
                 btnExportAll.Enabled = true;
                 btnExportCurrent.Enabled = true;
@@ -507,15 +582,26 @@ namespace Only_Skin_Deep
                 lvTextureList.Select();
                 lvTextureList.Items[0].Selected = true;
 
-                if (colourMessages.Count > 0)
+                String errorMessage = null;
+                foreach (ExportResult exportResult in exportResults)
                 {
-                    String colourMessage = "Error importing colours. Some textures may be shown in greyscale.\r\n\r\n";
-                    foreach (String message in colourMessages)
+                    if (exportResult.ResultType == ExportResultType.Success)
                     {
-                        colourMessage += message;
-                        colourMessage += "\r\n";
+                        continue;
                     }
-                    MessageBox.Show(colourMessage, "Error", MessageBoxButtons.OK);
+
+                    if (errorMessage == null)
+                    {
+                        errorMessage = "Error importing colours. Some textures may be shown in greyscale.\r\n\r\n";
+                    }
+
+                    errorMessage += exportResult.GetMessage();
+                    errorMessage += "\r\n";
+                }
+
+                if (errorMessage != null)
+                {
+                    MessageBox.Show(errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 }
             }
             else
@@ -527,39 +613,68 @@ namespace Only_Skin_Deep
                 exportAllToolStripMenuItem.Enabled = false;
                 txtInformation.Text = "";
                 pictureBox.Image = null;
-                MessageBox.Show("Only Skin Deep was unable to open the file you selected." + Environment.NewLine +
-                    failureReason);
+                String failureReason = (exportResults.Count > 0) ? exportResults[0].GetMessage() : "Unknown";
+                MessageBox.Show("Only Skin Deep was unable to open the file you selected.\r\n\r\n" +
+                    failureReason, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+
             lvTextureList.UpdateScrollBars();
         }
 
-        protected void LoadFile(string path)
+        protected void LoadTextures(String textureFileName, List<ExportResult> exportResults)
         {
-            CDT.TextureFileType type = CDT.TextureFile.GetFileType(path);
-
-            switch (type)
+            try
             {
-                case CDT.TextureFileType.SoulReaverPC:
-                    _File = new CDT.SoulReaverPCTextureFile(path);
-                    break;
-                case CDT.TextureFileType.SoulReaverDreamcast:
-                    _File = new CDT.SoulReaverDreamcastTextureFile(path);
-                    break;
-                case CDT.TextureFileType.SoulReaverPlaystation:
-                    _File = new CDT.SoulReaverPlaystationTextureFile(path);
-                    break;
-                case CDT.TextureFileType.SoulReaver2Playstation2:
-                    _File = new CDT.SoulReaver2PS2VRMTextureFile(path);
-                    break;
-                case CDT.TextureFileType.SoulReaver2PC:
-                    _File = new CDT.SoulReaver2PCVRMTextureFile(path);
-                    break;
-                default:
-                    throw new Exception("The file '" + path + "' does not appear to be encoded in a supported format.");
+                CDT.TextureFileType type = CDT.TextureFile.GetFileType(textureFileName);
+
+                switch (type)
+                {
+                    case CDT.TextureFileType.SoulReaverPC:
+                        _File = new CDT.SoulReaverPCTextureFile(textureFileName);
+                        break;
+                    case CDT.TextureFileType.SoulReaverDreamcast:
+                        _File = new CDT.SoulReaverDreamcastTextureFile(textureFileName);
+                        break;
+                    case CDT.TextureFileType.SoulReaverPlaystation:
+                        _File = new CDT.SoulReaverPlaystationTextureFile(textureFileName);
+                        break;
+                    case CDT.TextureFileType.SoulReaver2Playstation2:
+                        _File = new CDT.SoulReaver2PS2VRMTextureFile(textureFileName);
+                        break;
+                    case CDT.TextureFileType.SoulReaver2PC:
+                        _File = new CDT.SoulReaver2PCVRMTextureFile(textureFileName);
+                        break;
+                    default:
+                        break;
+                }
+
+                if (type == CDT.TextureFileType.Unknown)
+                {
+                    ExportResult.AddToList(exportResults, ExportResultType.Invalid, FileType.Texture, textureFileName);
+                }
+                else
+                {
+                    ExportResult.AddToList(exportResults, ExportResultType.Success, FileType.Texture, textureFileName);
+
+                    if (type == CDT.TextureFileType.SoulReaverPlaystation)
+                    {
+                        try
+                        {
+                            String objectFileName = Path.GetDirectoryName(textureFileName) + @"\" +
+                                Path.GetFileNameWithoutExtension(textureFileName) + ".pcm";
+                            LoadColours(objectFileName, exportResults);
+                        }
+                        catch (Exception) { }
+                    }
+                }
+            }
+            catch
+            {
+                ExportResult.AddToList(exportResults, ExportResultType.Failure, FileType.Texture, textureFileName);
             }
         }
 
-        protected void ImportColoursFromObject(String mainObjectFileName, List<string> exportMessages)
+        protected void LoadColours(String objectFileName, List<ExportResult> exportResults)
         {
             if (_File != null && _File.FileType == CDT.TextureFileType.SoulReaverPlaystation)
             {
@@ -568,36 +683,38 @@ namespace Only_Skin_Deep
                 #region Main Object
                 try
                 {
-                    CDO.SR1File mainObjectFile = new CDO.SR1File(mainObjectFileName);
-                    objectFiles.Add(mainObjectFile);
+                    CDO.SR1File objectFile = new CDO.SR1File(objectFileName);
+                    objectFiles.Add(objectFile);
+                    ExportResult.AddToList(exportResults, ExportResultType.Success, FileType.Object, objectFileName);
 
                     #region Connected Units
-                    for (int u = 0; u < mainObjectFile.m_uConnectedUnitCount; u++)
+                    for (int u = 0; u < objectFile.m_uConnectedUnitCount; u++)
                     {
-                        String connectedUnitFileName = Path.GetDirectoryName(mainObjectFileName) + @"\" + mainObjectFile.m_astrConnectedUnit[u] + ".pcm";
+                        String connectedObjectFileName = Path.GetDirectoryName(objectFileName) + @"\" + objectFile.m_astrConnectedUnit[u] + ".pcm";
                         try
                         {
-                            CDO.SR1File connectedSRFile = new CDO.SR1File(connectedUnitFileName);
-                            objectFiles.Add(connectedSRFile);
+                            CDO.SR1File connectedObjectFile = new CDO.SR1File(connectedObjectFileName);
+                            objectFiles.Add(connectedObjectFile);
+                            ExportResult.AddToList(exportResults, ExportResultType.Success, FileType.Object, connectedObjectFileName);
                         }
                         catch (FileNotFoundException)
                         {
-                            exportMessages.Add("Missing colour file - \"" + connectedUnitFileName + "\"");
+                            ExportResult.AddToList(exportResults, ExportResultType.Missing, FileType.Object, connectedObjectFileName);
                         }
                         catch
                         {
-                            exportMessages.Add("Error reading colour file - \"" + connectedUnitFileName + "\"");
+                            ExportResult.AddToList(exportResults, ExportResultType.Failure, FileType.Object, connectedObjectFileName);
                         }
                     }
                     #endregion
                 }
                 catch (FileNotFoundException)
                 {
-                    exportMessages.Add("Missing colour file - \"" + mainObjectFileName + "\"");
+                    ExportResult.AddToList(exportResults, ExportResultType.Missing, FileType.Object, objectFileName);
                 }
                 catch
                 {
-                    exportMessages.Add("Error reading colour file - \"" + mainObjectFileName + "\"");
+                    ExportResult.AddToList(exportResults, ExportResultType.Failure, FileType.Object, objectFileName);
                 }
                 #endregion
 
