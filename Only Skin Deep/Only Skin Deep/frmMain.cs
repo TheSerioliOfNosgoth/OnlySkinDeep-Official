@@ -59,7 +59,6 @@ namespace Only_Skin_Deep
         public frmMain(string[] args)
         {
             InitializeComponent();
-            directXView.Initialize();
             btnSave.Enabled = false;
             btnExportAll.Enabled = false;
             btnExportCurrent.Enabled = false;
@@ -174,10 +173,19 @@ namespace Only_Skin_Deep
                     throw new Exception();
                 }
 
-                directXView.Width = rect.Width;
-                directXView.Height = rect.Height;
-                Microsoft.DirectX.Direct3D.Texture texture = _File.GetTexture(directXView.GetDevice(), index);
-                directXView.SetTexture(texture, rect);
+                try
+                {
+                    pictureBox.Image = _File.GetTextureAsBitmap(index);
+                }
+                catch (Exception)
+                {
+                    pictureBox.Image = null;
+                }
+
+                //directXView.Width = rect.Width;
+                //directXView.Height = rect.Height;
+                //Microsoft.DirectX.Direct3D.Texture texture = _File.GetTexture(directXView.GetDevice(), index);
+                //directXView.SetTexture(texture, rect);
             }
             catch
             {
@@ -185,9 +193,6 @@ namespace Only_Skin_Deep
                 //rect.Height = 255;
                 //directXView.SetTexture(null, rect);
             }
-
-            //directXView.Invalidate();
-            directXView.Update();
         }
 
         #endregion
@@ -429,8 +434,6 @@ namespace Only_Skin_Deep
 
         protected void OpenFile(string path)
         {
-            directXView.PauseRendering = true;
-
             bool openSuccess = true;
             string failureReason = "";
             try
@@ -470,6 +473,15 @@ namespace Only_Skin_Deep
 
                 lvTextureList.Items.AddRange(textureListEntries);
                 lvTextureList.SelectedIndices.Add(0);
+
+                try
+                {
+                    pictureBox.Image = _File.GetTextureAsBitmap(0);
+                }
+                catch (Exception)
+                {
+                    pictureBox.Image = null;
+                }
             }
             else
             {
@@ -479,12 +491,11 @@ namespace Only_Skin_Deep
                 btnImportCurrent.Enabled = false;
                 exportAllToolStripMenuItem.Enabled = false;
                 txtInformation.Text = "";
+                pictureBox.Image = null;
                 MessageBox.Show("Only Skin Deep was unable to open the file you selected." + Environment.NewLine +
                     failureReason);
             }
             lvTextureList.UpdateScrollBars();
-
-            directXView.PauseRendering = false;
         }
 
         protected void LoadFile(string path)
@@ -579,8 +590,6 @@ namespace Only_Skin_Deep
 
         protected void SaveFile()
         {
-            directXView.PauseRendering = true;
-
             DialogResult result = new DialogResult();
             SaveFileDialog oDialogue = new SaveFileDialog();
             oDialogue.Filter = "Crystal Dynamics VRAM Data (*.vrm)|*.vrm|All Files (*.*)|*.*";
@@ -592,8 +601,6 @@ namespace Only_Skin_Deep
                     _File.ExportArchiveFile(oDialogue.FileName);
                 }
             }
-
-            directXView.PauseRendering = false;
         }
 
         // for debugging only
@@ -1329,8 +1336,6 @@ namespace Only_Skin_Deep
                 return;
             }
 
-            directXView.PauseRendering = true;
-
             DialogResult result = new DialogResult();
             OpenFileDialog oDialogue = new OpenFileDialog();
             oDialogue.Multiselect = false;
@@ -1343,8 +1348,6 @@ namespace Only_Skin_Deep
                     _File.ImportFile(lvTextureList.SelectedIndices[0], oDialogue.FileName);
                 }
             }
-
-            directXView.PauseRendering = false;
         }
         #endregion
     }
