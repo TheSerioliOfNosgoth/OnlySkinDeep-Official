@@ -49,6 +49,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
         public VRMFormat Format;
         public VRMPaletteDefinition Palette;
         public VRMSubTextureDefinition[] SubTextures;
+        public String NewTexturePath;
     }
 
     public struct VRMPaletteDefinition

@@ -60,21 +60,23 @@ namespace Only_Skin_Deep
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutOnlySkinDeepToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pnlButtons = new System.Windows.Forms.Panel();
+            this.btnImportCurrent = new BenLincoln.UI.HoverImageButton();
             this.ilExportCurrent = new System.Windows.Forms.ImageList(this.components);
+            this.btnExportCurrent = new BenLincoln.UI.HoverImageButton();
+            this.btnExportRawData = new BenLincoln.UI.HoverImageButton();
             this.ilExportAll = new System.Windows.Forms.ImageList(this.components);
+            this.btnExportAll = new BenLincoln.UI.HoverImageButton();
+            this.btnOpen = new BenLincoln.UI.HoverImageButton();
             this.ilOpen = new System.Windows.Forms.ImageList(this.components);
             this.pnlInformation = new System.Windows.Forms.Panel();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.txtInformation = new System.Windows.Forms.TextBox();
-            this.btnExportCurrent = new BenLincoln.UI.HoverImageButton();
-            this.btnExportRawData = new BenLincoln.UI.HoverImageButton();
-            this.btnExportAll = new BenLincoln.UI.HoverImageButton();
-            this.btnOpen = new BenLincoln.UI.HoverImageButton();
             this.directXView = new ModelEx3.DirectXView();
             this.lvTextureList = new Only_Skin_Deep.ListViewEx();
             this.chID = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.chName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.chSize = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.txtInformation = new System.Windows.Forms.TextBox();
+            this.btnSave = new BenLincoln.UI.HoverImageButton();
             this.mnuMenu.SuspendLayout();
             this.pnlButtons.SuspendLayout();
             this.pnlInformation.SuspendLayout();
@@ -110,35 +112,35 @@ namespace Only_Skin_Deep
             // openToolStripMenuItem
             // 
             this.openToolStripMenuItem.Name = "openToolStripMenuItem";
-            this.openToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.openToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.openToolStripMenuItem.Text = "&Open";
             this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
             // 
             // exportCurrentToolStripMenuItem
             // 
             this.exportCurrentToolStripMenuItem.Name = "exportCurrentToolStripMenuItem";
-            this.exportCurrentToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.exportCurrentToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.exportCurrentToolStripMenuItem.Text = "Export Current";
             this.exportCurrentToolStripMenuItem.Click += new System.EventHandler(this.exportCurrentToolStripMenuItem_Click);
             // 
             // exportAllToolStripMenuItem
             // 
             this.exportAllToolStripMenuItem.Name = "exportAllToolStripMenuItem";
-            this.exportAllToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.exportAllToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.exportAllToolStripMenuItem.Text = "Export &All";
             this.exportAllToolStripMenuItem.Click += new System.EventHandler(this.exportAllToolStripMenuItem_Click);
             // 
             // batchConvertToolStripMenuItem
             // 
             this.batchConvertToolStripMenuItem.Name = "batchConvertToolStripMenuItem";
-            this.batchConvertToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.batchConvertToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.batchConvertToolStripMenuItem.Text = "&Batch Convert";
             this.batchConvertToolStripMenuItem.Click += new System.EventHandler(this.batchConvertToolStripMenuItem_Click);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(150, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.exitToolStripMenuItem.Text = "E&xit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
@@ -159,6 +161,8 @@ namespace Only_Skin_Deep
             // 
             // pnlButtons
             // 
+            this.pnlButtons.Controls.Add(this.btnSave);
+            this.pnlButtons.Controls.Add(this.btnImportCurrent);
             this.pnlButtons.Controls.Add(this.btnExportCurrent);
             this.pnlButtons.Controls.Add(this.btnExportRawData);
             this.pnlButtons.Controls.Add(this.btnExportAll);
@@ -169,6 +173,19 @@ namespace Only_Skin_Deep
             this.pnlButtons.Size = new System.Drawing.Size(484, 66);
             this.pnlButtons.TabIndex = 1;
             // 
+            // btnImportCurrent
+            // 
+            this.btnImportCurrent.FlatAppearance.BorderSize = 0;
+            this.btnImportCurrent.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnImportCurrent.ImageIndex = 1;
+            this.btnImportCurrent.ImageList = this.ilExportCurrent;
+            this.btnImportCurrent.Location = new System.Drawing.Point(243, 3);
+            this.btnImportCurrent.Name = "btnImportCurrent";
+            this.btnImportCurrent.Size = new System.Drawing.Size(54, 54);
+            this.btnImportCurrent.TabIndex = 6;
+            this.btnImportCurrent.UseVisualStyleBackColor = true;
+            this.btnImportCurrent.Click += new System.EventHandler(this.btnImportCurrent_Click);
+            // 
             // ilExportCurrent
             // 
             this.ilExportCurrent.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("ilExportCurrent.ImageStream")));
@@ -177,6 +194,33 @@ namespace Only_Skin_Deep
             this.ilExportCurrent.Images.SetKeyName(1, "Button-ExportCurrent-Enabled.PNG");
             this.ilExportCurrent.Images.SetKeyName(2, "Button-ExportCurrent-Hover.PNG");
             // 
+            // btnExportCurrent
+            // 
+            this.btnExportCurrent.FlatAppearance.BorderSize = 0;
+            this.btnExportCurrent.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExportCurrent.ImageIndex = 1;
+            this.btnExportCurrent.ImageList = this.ilExportCurrent;
+            this.btnExportCurrent.Location = new System.Drawing.Point(183, 3);
+            this.btnExportCurrent.Name = "btnExportCurrent";
+            this.btnExportCurrent.Size = new System.Drawing.Size(54, 54);
+            this.btnExportCurrent.TabIndex = 5;
+            this.btnExportCurrent.UseVisualStyleBackColor = true;
+            this.btnExportCurrent.Click += new System.EventHandler(this.btnExportCurrent_Click);
+            // 
+            // btnExportRawData
+            // 
+            this.btnExportRawData.FlatAppearance.BorderSize = 0;
+            this.btnExportRawData.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExportRawData.ImageIndex = 1;
+            this.btnExportRawData.ImageList = this.ilExportAll;
+            this.btnExportRawData.Location = new System.Drawing.Point(303, 3);
+            this.btnExportRawData.Name = "btnExportRawData";
+            this.btnExportRawData.Size = new System.Drawing.Size(54, 54);
+            this.btnExportRawData.TabIndex = 7;
+            this.btnExportRawData.UseVisualStyleBackColor = true;
+            this.btnExportRawData.Visible = false;
+            this.btnExportRawData.Click += new System.EventHandler(this.btnExportRawData_Click);
+            // 
             // ilExportAll
             // 
             this.ilExportAll.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("ilExportAll.ImageStream")));
@@ -184,6 +228,32 @@ namespace Only_Skin_Deep
             this.ilExportAll.Images.SetKeyName(0, "Button-ExportAll-Disabled.PNG");
             this.ilExportAll.Images.SetKeyName(1, "Button-ExportAll-Enabled.PNG");
             this.ilExportAll.Images.SetKeyName(2, "Button-ExportAll-Hover.PNG");
+            // 
+            // btnExportAll
+            // 
+            this.btnExportAll.FlatAppearance.BorderSize = 0;
+            this.btnExportAll.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExportAll.ImageIndex = 1;
+            this.btnExportAll.ImageList = this.ilExportAll;
+            this.btnExportAll.Location = new System.Drawing.Point(123, 0);
+            this.btnExportAll.Name = "btnExportAll";
+            this.btnExportAll.Size = new System.Drawing.Size(54, 54);
+            this.btnExportAll.TabIndex = 4;
+            this.btnExportAll.UseVisualStyleBackColor = true;
+            this.btnExportAll.Click += new System.EventHandler(this.btnExportAll_Click);
+            // 
+            // btnOpen
+            // 
+            this.btnOpen.FlatAppearance.BorderSize = 0;
+            this.btnOpen.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnOpen.ImageIndex = 1;
+            this.btnOpen.ImageList = this.ilOpen;
+            this.btnOpen.Location = new System.Drawing.Point(3, 3);
+            this.btnOpen.Name = "btnOpen";
+            this.btnOpen.Size = new System.Drawing.Size(54, 54);
+            this.btnOpen.TabIndex = 2;
+            this.btnOpen.UseVisualStyleBackColor = true;
+            this.btnOpen.Click += new System.EventHandler(this.btnOpen_Click);
             // 
             // ilOpen
             // 
@@ -222,76 +292,13 @@ namespace Only_Skin_Deep
             this.splitContainer1.SplitterDistance = 300;
             this.splitContainer1.TabIndex = 4;
             // 
-            // txtInformation
-            // 
-            this.txtInformation.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.txtInformation.Location = new System.Drawing.Point(0, 419);
-            this.txtInformation.Multiline = true;
-            this.txtInformation.Name = "txtInformation";
-            this.txtInformation.ReadOnly = true;
-            this.txtInformation.Size = new System.Drawing.Size(484, 55);
-            this.txtInformation.TabIndex = 0;
-            // 
-            // btnExportCurrent
-            // 
-            this.btnExportCurrent.FlatAppearance.BorderSize = 0;
-            this.btnExportCurrent.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnExportCurrent.ImageIndex = 1;
-            this.btnExportCurrent.ImageList = this.ilExportCurrent;
-            this.btnExportCurrent.Location = new System.Drawing.Point(123, 3);
-            this.btnExportCurrent.Name = "btnExportCurrent";
-            this.btnExportCurrent.Size = new System.Drawing.Size(54, 54);
-            this.btnExportCurrent.TabIndex = 5;
-            this.btnExportCurrent.UseVisualStyleBackColor = true;
-            this.btnExportCurrent.Click += new System.EventHandler(this.btnExportCurrent_Click);
-            // 
-            // btnExportRawData
-            // 
-            this.btnExportRawData.FlatAppearance.BorderSize = 0;
-            this.btnExportRawData.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnExportRawData.ImageIndex = 1;
-            this.btnExportRawData.ImageList = this.ilExportAll;
-            this.btnExportRawData.Location = new System.Drawing.Point(183, 3);
-            this.btnExportRawData.Name = "btnExportRawData";
-            this.btnExportRawData.Size = new System.Drawing.Size(54, 54);
-            this.btnExportRawData.TabIndex = 4;
-            this.btnExportRawData.UseVisualStyleBackColor = true;
-            this.btnExportRawData.Visible = false;
-            this.btnExportRawData.Click += new System.EventHandler(this.btnExportRawData_Click);
-            // 
-            // btnExportAll
-            // 
-            this.btnExportAll.FlatAppearance.BorderSize = 0;
-            this.btnExportAll.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnExportAll.ImageIndex = 1;
-            this.btnExportAll.ImageList = this.ilExportAll;
-            this.btnExportAll.Location = new System.Drawing.Point(63, 3);
-            this.btnExportAll.Name = "btnExportAll";
-            this.btnExportAll.Size = new System.Drawing.Size(54, 54);
-            this.btnExportAll.TabIndex = 3;
-            this.btnExportAll.UseVisualStyleBackColor = true;
-            this.btnExportAll.Click += new System.EventHandler(this.btnExportAll_Click);
-            // 
-            // btnOpen
-            // 
-            this.btnOpen.FlatAppearance.BorderSize = 0;
-            this.btnOpen.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnOpen.ImageIndex = 1;
-            this.btnOpen.ImageList = this.ilOpen;
-            this.btnOpen.Location = new System.Drawing.Point(3, 3);
-            this.btnOpen.Name = "btnOpen";
-            this.btnOpen.Size = new System.Drawing.Size(54, 54);
-            this.btnOpen.TabIndex = 2;
-            this.btnOpen.UseVisualStyleBackColor = true;
-            this.btnOpen.Click += new System.EventHandler(this.btnOpen_Click);
-            // 
             // directXView
             // 
             this.directXView.Location = new System.Drawing.Point(0, 0);
             this.directXView.Name = "directXView";
             this.directXView.PauseRendering = false;
             this.directXView.Size = new System.Drawing.Size(256, 256);
-            this.directXView.TabIndex = 4;
+            this.directXView.TabIndex = 7;
             // 
             // lvTextureList
             // 
@@ -308,7 +315,7 @@ namespace Only_Skin_Deep
             this.lvTextureList.MultiSelect = false;
             this.lvTextureList.Name = "lvTextureList";
             this.lvTextureList.Size = new System.Drawing.Size(484, 115);
-            this.lvTextureList.TabIndex = 3;
+            this.lvTextureList.TabIndex = 8;
             this.lvTextureList.UseCompatibleStateImageBehavior = false;
             this.lvTextureList.View = System.Windows.Forms.View.Details;
             // 
@@ -326,6 +333,29 @@ namespace Only_Skin_Deep
             // 
             this.chSize.Text = "Size";
             this.chSize.Width = 100;
+            // 
+            // txtInformation
+            // 
+            this.txtInformation.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.txtInformation.Location = new System.Drawing.Point(0, 419);
+            this.txtInformation.Multiline = true;
+            this.txtInformation.Name = "txtInformation";
+            this.txtInformation.ReadOnly = true;
+            this.txtInformation.Size = new System.Drawing.Size(484, 55);
+            this.txtInformation.TabIndex = 0;
+            // 
+            // btnSave
+            // 
+            this.btnSave.FlatAppearance.BorderSize = 0;
+            this.btnSave.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSave.ImageIndex = 1;
+            this.btnSave.ImageList = this.ilOpen;
+            this.btnSave.Location = new System.Drawing.Point(63, 3);
+            this.btnSave.Name = "btnSave";
+            this.btnSave.Size = new System.Drawing.Size(54, 54);
+            this.btnSave.TabIndex = 3;
+            this.btnSave.UseVisualStyleBackColor = true;
+            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
             // frmMain
             // 
@@ -380,6 +410,8 @@ namespace Only_Skin_Deep
         private System.Windows.Forms.ColumnHeader chName;
         private System.Windows.Forms.ColumnHeader chSize;
         private System.Windows.Forms.ToolStripMenuItem exportCurrentToolStripMenuItem;
+        private BenLincoln.UI.HoverImageButton btnImportCurrent;
+        private BenLincoln.UI.HoverImageButton btnSave;
     }
 }
 

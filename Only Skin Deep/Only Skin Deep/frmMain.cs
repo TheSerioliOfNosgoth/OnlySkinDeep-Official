@@ -60,8 +60,10 @@ namespace Only_Skin_Deep
         {
             InitializeComponent();
             directXView.Initialize();
+            btnSave.Enabled = false;
             btnExportAll.Enabled = false;
             btnExportCurrent.Enabled = false;
+            btnImportCurrent.Enabled = false;
             exportAllToolStripMenuItem.Enabled = false;
             lvTextureList.SelectedIndexChanged += new EventHandler(lvTextureList_SelectedIndexChanged);
 
@@ -104,6 +106,11 @@ namespace Only_Skin_Deep
             OpenFile();
         }
 
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            SaveFile();
+        }
+
         private void batchConvertToolStripMenuItem_Click(object sender, EventArgs e)
         {
             BatchConvert();
@@ -127,6 +134,11 @@ namespace Only_Skin_Deep
         private void btnExportCurrent_Click(object sender, EventArgs e)
         {
             ExportCurrentThreaded();
+        }
+
+        private void btnImportCurrent_Click(object sender, EventArgs e)
+        {
+            ImportCurrent();
         }
 
         private void aboutOnlySkinDeepToolStripMenuItem_Click(object sender, EventArgs e)
@@ -157,12 +169,20 @@ namespace Only_Skin_Deep
                     rect.Height = VRMFile.TextureDefinitions[index].Height;
                 }
 
+                if (rect.Width <= 0 || rect.Height <= 0)
+                {
+                    throw new Exception();
+                }
+
                 directXView.Width = rect.Width;
                 directXView.Height = rect.Height;
-                directXView.SetTexture(_File.GetTexture(directXView.GetDevice(), index), rect);
+                Microsoft.DirectX.Direct3D.Texture texture = _File.GetTexture(directXView.GetDevice(), index);
+                directXView.SetTexture(texture, rect);
             }
             catch
             {
+                //rect.Width = 255;
+                //rect.Height = 255;
                 //directXView.SetTexture(null, rect);
             }
 
@@ -427,8 +447,10 @@ namespace Only_Skin_Deep
 
             if ((openSuccess) && (_File != null))
             {
+                btnSave.Enabled = true;
                 btnExportAll.Enabled = true;
                 btnExportCurrent.Enabled = true;
+                btnImportCurrent.Enabled = true;
                 exportAllToolStripMenuItem.Enabled = true;
                 txtInformation.Text = "File: " + _File.FilePath + Environment.NewLine +
                     "Type: " + _File.FileTypeName + Environment.NewLine +
@@ -451,7 +473,10 @@ namespace Only_Skin_Deep
             }
             else
             {
+                btnSave.Enabled = false;
                 btnExportAll.Enabled = false;
+                btnExportCurrent.Enabled = false;
+                btnImportCurrent.Enabled = false;
                 exportAllToolStripMenuItem.Enabled = false;
                 txtInformation.Text = "";
                 MessageBox.Show("Only Skin Deep was unable to open the file you selected." + Environment.NewLine +
@@ -550,6 +575,25 @@ namespace Only_Skin_Deep
             types.Add(crm);
 
             return types;
+        }
+
+        protected void SaveFile()
+        {
+            directXView.PauseRendering = true;
+
+            DialogResult result = new DialogResult();
+            SaveFileDialog oDialogue = new SaveFileDialog();
+            oDialogue.Filter = "Crystal Dynamics VRAM Data (*.vrm)|*.vrm|All Files (*.*)|*.*";
+            result = oDialogue.ShowDialog();
+            if (result == DialogResult.OK)
+            {
+                if (_File != null)
+                {
+                    _File.ExportArchiveFile(oDialogue.FileName);
+                }
+            }
+
+            directXView.PauseRendering = false;
         }
 
         // for debugging only
@@ -696,6 +740,12 @@ namespace Only_Skin_Deep
 
         protected void ExportCurrentThreaded()
         {
+            if (lvTextureList.SelectedIndices == null)
+            {
+                MessageBox.Show("No texture has been selelected");
+                return;
+            }
+
             DialogResult result = new DialogResult();
             FolderBrowserDialog fDialogue = new FolderBrowserDialog();
             result = fDialogue.ShowDialog();
@@ -1271,6 +1321,31 @@ namespace Only_Skin_Deep
             }
         }
 
+        protected void ImportCurrent()
+        {
+            if (lvTextureList.SelectedIndices == null)
+            {
+                MessageBox.Show("No texture has been selelected");
+                return;
+            }
+
+            directXView.PauseRendering = true;
+
+            DialogResult result = new DialogResult();
+            OpenFileDialog oDialogue = new OpenFileDialog();
+            oDialogue.Multiselect = false;
+            oDialogue.Filter = "DirectDraw Surface (*.dds)|*.dds|All Files (*.*)|*.*";
+            result = oDialogue.ShowDialog();
+            if (result == DialogResult.OK)
+            {
+                if (_File != null)
+                {
+                    _File.ImportFile(lvTextureList.SelectedIndices[0], oDialogue.FileName);
+                }
+            }
+
+            directXView.PauseRendering = false;
+        }
         #endregion
     }
 }
