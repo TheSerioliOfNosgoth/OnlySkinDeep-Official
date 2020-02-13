@@ -94,13 +94,6 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                     _PolygonData = null;
                 }
             }
-
-            //BuildTexturesFromPolygonData(_PolygonData, _PolygonData != null, true);
-
-            for (int i = 0; i < _TextureCount; i++)
-            {
-                _Textures[i] = GetTextureAsBitmap(i, GetGreyscalePalette());
-            }
         }
 
         protected override int _GetTextureCount()
@@ -207,23 +200,95 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             return textures;
         }
 
-        public void BuildTextureFromPolygonData(int index, bool quantizeBounds)
+        public void BuildTexturesFromPolygonData(SoulReaverPlaystationPolygonTextureData[] texData, bool drawGreyScaleFirst, bool quantizeBounds)
         {
+            for (int i = 0; i < _TextureCount; i++)
+            {
+                _Textures[i] = _GetTextureAsBitmap(i, texData, drawGreyScaleFirst, quantizeBounds);
+            }
+        }
+
+        protected override D3D.Texture _GetTexture(D3D.Device device, int index)
+        {
+            return D3D.Texture.FromBitmap(device, _GetTextureAsBitmap(index), 0, D3D.Pool.Managed);
+        }
+
+        protected override Bitmap _GetTextureAsBitmap(int index)
+        {
+            if (_Textures[index] == null)
+            {
+                if (_PolygonData != null)
+                {
+                    _Textures[index] = _GetTextureAsBitmap(index, _PolygonData, false, true);
+                }
+                else
+                {
+                    _Textures[index] = _GetTextureAsBitmap(index, GetGreyscalePalette());
+                }
+            }
+
+            return _Textures[index];
+        }
+
+        protected Bitmap _GetTextureAsBitmap(int index, Color[] palette)
+        {
+            Bitmap retBitmap = new Bitmap(256, 256);
+
+            int byteNum = 0;
+            for (int y = 0; y < 256; y++)
+            {
+                for (int x = 0; x < 256; x += 2)
+                {
+                    byte currentByte = _TextureData[index][byteNum];
+                    int leftPixel = (int)currentByte & 0x0F;
+                    int rightPixel = (int)((currentByte & 0xF0) >> 4);
+                    retBitmap.SetPixel(x, y, palette[leftPixel]);
+                    retBitmap.SetPixel(x + 1, y, palette[rightPixel]);
+                    byteNum++;
+                }
+            }
+
+            return retBitmap;
+        }
+
+        protected Bitmap _GetTextureAsBitmap(int index, SoulReaverPlaystationPolygonTextureData[] texData, bool drawGreyScaleFirst, bool quantizeBounds)
+        {
+            Color[,] allPixels = new Color[256, 256];
+
             // hashtable to store counts of palette usage
             Hashtable palettes = new Hashtable();
 
             // initialize texture
-            Color chromaKey = Color.FromArgb(1, 128, 128, 128);
-            _Textures[index] = new Bitmap(256, 256);
-            for (int y = 0; y < 256; y++)
+            if (drawGreyScaleFirst)
             {
-                for (int x = 0; x < 256; x++)
+                Color[] palette = GetGreyscalePalette();
+                int byteNum = 0;
+                for (int y = 0; y < 256; y++)
                 {
-                    _Textures[index].SetPixel(x, y, chromaKey);
+                    for (int x = 0; x < 256; x += 2)
+                    {
+                        byte currentByte = _TextureData[index][byteNum];
+                        int leftPixel = (int)currentByte & 0x0F;
+                        int rightPixel = (int)((currentByte & 0xF0) >> 4);
+                        allPixels[x, y] = palette[leftPixel];
+                        allPixels[x + 1, y] = palette[rightPixel];
+                        byteNum++;
+                    }
+                }
+            }
+            else
+            {
+                Color chromaKey = Color.FromArgb(1, 128, 128, 128);
+                for (int y = 0; y < 256; y++)
+                {
+                    for (int x = 0; x < 256; x++)
+                    {
+                        allPixels[x, y] = chromaKey;
+                    }
                 }
             }
 
-            #region Colour in from polygon data
+            #region Colour in texture from polygon data
             // use the polygon data to colour in all possible parts of the textures
             foreach (SoulReaverPlaystationPolygonTextureData poly in _PolygonData)
             {
@@ -283,7 +348,8 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                     }
                 }
 
-                // if specified, quantize the rectangle's boundaries 
+                // if specified, quantize the rectangle's boundaries
+                #region Quantize bounds
                 if (quantizeBounds)
                 {
                     while ((uMin % width) > 0)
@@ -302,6 +368,26 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                     {
                         vMax++;
                     }
+
+                    //// if specified, quantize the rectangle's boundaries to a multiple of 16
+                    //    int quantizeRes = 16;
+                    //    while ((uMin % quantizeRes) > 0)
+                    //    {
+                    //        uMin--;
+                    //    }
+                    //    while ((uMax % quantizeRes) > 0)
+                    //    {
+                    //        uMax++;
+                    //    }
+                    //    while ((vMin % quantizeRes) > 0)
+                    //    {
+                    //        vMin--;
+                    //    }
+                    //    while ((vMax % quantizeRes) > 0)
+                    //    {
+                    //        vMax++;
+                    //    }
+
                     if (uMin < 0)
                     {
                         uMin = 0;
@@ -319,44 +405,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                         vMax = 256;
                     }
                 }
-
-                //// if specified, quantize the rectangle's boundaries to a multiple of 16
-                //if (quantizeBounds)
-                //{
-                //    int quantizeRes = 16;
-                //    while ((uMin % quantizeRes) > 0)
-                //    {
-                //        uMin--;
-                //    }
-                //    while ((uMax % quantizeRes) > 0)
-                //    {
-                //        uMax++;
-                //    }
-                //    while ((vMin % quantizeRes) > 0)
-                //    {
-                //        vMin--;
-                //    }
-                //    while ((vMax % quantizeRes) > 0)
-                //    {
-                //        vMax++;
-                //    }
-                //    if (uMin < 0)
-                //    {
-                //        uMin = 0;
-                //    }
-                //    if (uMax > 256)
-                //    {
-                //        uMax = 256;
-                //    }
-                //    if (vMin < 0)
-                //    {
-                //        vMin = 0;
-                //    }
-                //    if (vMax > 256)
-                //    {
-                //        vMax = 256;
-                //    }
-                //}
+                #endregion
 
                 for (int y = vMin; y < vMax; y++)
                 {
@@ -368,332 +417,82 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                         int rightPixel = (int)((currentByte & 0xF0) >> 4);
                         Color leftPixelColour = palette[leftPixel];
                         Color rightPixelColour = palette[rightPixel];
-                        _Textures[index].SetPixel(x, y, leftPixelColour);
-                        _Textures[index].SetPixel((x + 1), y, rightPixelColour);
+                        allPixels[x, y] = leftPixelColour;
+                        allPixels[x + 1, y] = rightPixelColour;
                     }
                 }
             }
             #endregion
-
-            int texNum = 0;
-
-            // find the most frequently-used palette
-            string palID = "";
-            int palCount = 0;
-            foreach (string pID in palettes.Keys)
-            {
-                int pCount = (int)palettes[pID];
-                if (pCount > palCount)
-                {
-                    palID = pID;
-                }
-            }
-            string[] palDecode = palID.Split('-');
-            int mostCommonPaletteColumn = int.Parse(palDecode[0]);
-            int mostCommonPaletteRow = int.Parse(palDecode[1]);
-            Color[] commonPalette = GetPalette(mostCommonPaletteColumn, mostCommonPaletteRow);
-
-            for (int y = 0; y < 256; y++)
-            {
-                for (int x = 0; x < 256; x += 2)
-                {
-                    bool leftPixChroma = (_Textures[index].GetPixel(x, y).A == 1);
-                    bool rightPixChroma = (_Textures[index].GetPixel((x + 1), y).A == 1);
-                    if (leftPixChroma || rightPixChroma)
-                    {
-                        int dataOffset = (y * 128) + (x / 2);
-                        byte currentByte = _TextureData[index][dataOffset];
-                        int leftPixel = (int)currentByte & 0x0F;
-                        int rightPixel = (int)((currentByte & 0xF0) >> 4);
-                        Color leftPixelColour = commonPalette[leftPixel];
-                        Color rightPixelColour = commonPalette[rightPixel];
-                        if (leftPixChroma)
-                        {
-                            _Textures[index].SetPixel(x, y, leftPixelColour);
-                        }
-                        if (rightPixChroma)
-                        {
-                            _Textures[index].SetPixel((x + 1), y, rightPixelColour);
-                        }
-                    }
-                }
-            }
-        }
-
-        public void BuildTexturesFromPolygonData(SoulReaverPlaystationPolygonTextureData[] texData, bool drawGreyScaleFirst, bool quantizeBounds)
-        {
-            // hashtable to store counts of palette usage
-            Hashtable palettes = new Hashtable();
-
-            // initialize textures
-            if (drawGreyScaleFirst)
-            {
-                for (int i = 0; i < _TextureCount; i++)
-                {
-                    _Textures[i] = GetTextureAsBitmap(i, GetGreyscalePalette());
-                }
-            }
-            else
-            {
-                Color chromaKey = Color.FromArgb(1, 128, 128, 128);
-                for (int i = 0; i < _TextureCount; i++)
-                {
-                    _Textures[i] = new Bitmap(256, 256);
-                    for (int y = 0; y < 256; y++)
-                    {
-                        for (int x = 0; x < 256; x++)
-                        {
-                            _Textures[i].SetPixel(x, y, chromaKey);
-                        }
-                    }
-                }
-            }
-
-            #region Colour in from polygon data
-            // use the polygon data to colour in all possible parts of the textures
-            foreach (SoulReaverPlaystationPolygonTextureData poly in texData)
-            {
-                // add or update palette list
-                string paletteIDString = poly.paletteColumn.ToString() + "-" + poly.paletteRow.ToString();
-                if (palettes.Contains(paletteIDString))
-                {
-                    int newPalCount = (int)palettes[paletteIDString];
-                    newPalCount++;
-                    palettes[paletteIDString] = newPalCount;
-                }
-                else
-                {
-                    int newPalCount = 1;
-                    palettes.Add(paletteIDString, newPalCount);
-                }
-
-                int uMin = 255;
-                int uMax = 0;
-                int vMin = 255;
-                int vMax = 0;
-                Color[] palette = GetPalette(poly.paletteColumn, poly.paletteRow);
-                // get the rectangle defined by the minimum and maximum U and V coords
-                foreach (int u in poly.u)
-                {
-                    uMin = Math.Min(uMin, u);
-                    uMax = Math.Max(uMax, u);
-                }
-                foreach (int v in poly.v)
-                {
-                    vMin = Math.Min(vMin, v);
-                    vMax = Math.Max(vMax, v);
-                }
-
-                int width = uMax - uMin;
-                for (int b = 0; b < 8; b++)
-                {
-                    if ((1 << b) >= width)
-                    {
-                        width = 1 << b;
-                        break;
-                    }
-                }
-
-                int height = vMax - vMin;
-                for (int b = 0; b < 8; b++)
-                {
-                    if ((1 << b) >= height)
-                    {
-                        height = 1 << b;
-                        break;
-                    }
-                }
-
-                // if specified, quantize the rectangle's boundaries 
-                if (quantizeBounds)
-                {
-                    while ((uMin % width) > 0)
-                    {
-                        uMin--;
-                    }
-                    while ((uMax % width) > 0)
-                    {
-                        uMax++;
-                    }
-                    while ((vMin % height) > 0)
-                    {
-                        vMin--;
-                    }
-                    while ((vMax % height) > 0)
-                    {
-                        vMax++;
-                    }
-                    if (uMin < 0)
-                    {
-                        uMin = 0;
-                    }
-                    if (uMax > 256)
-                    {
-                        uMax = 256;
-                    }
-                    if (vMin < 0)
-                    {
-                        vMin = 0;
-                    }
-                    if (vMax > 256)
-                    {
-                        vMax = 256;
-                    }
-                }
-
-                //// if specified, quantize the rectangle's boundaries to a multiple of 16
-                //if (quantizeBounds)
-                //{
-                //    int quantizeRes = 16;
-                //    while ((uMin % quantizeRes) > 0)
-                //    {
-                //        uMin--;
-                //    }
-                //    while ((uMax % quantizeRes) > 0)
-                //    {
-                //        uMax++;
-                //    }
-                //    while ((vMin % quantizeRes) > 0)
-                //    {
-                //        vMin--;
-                //    }
-                //    while ((vMax % quantizeRes) > 0)
-                //    {
-                //        vMax++;
-                //    }
-                //    if (uMin < 0)
-                //    {
-                //        uMin = 0;
-                //    }
-                //    if (uMax > 256)
-                //    {
-                //        uMax = 256;
-                //    }
-                //    if (vMin < 0)
-                //    {
-                //        vMin = 0;
-                //    }
-                //    if (vMax > 256)
-                //    {
-                //        vMax = 256;
-                //    }
-                //}
-
-                for (int y = vMin; y < vMax; y++)
-                {
-                    for (int x = uMin; x < uMax; x+= 2)
-                    {
-                        int dataOffset = (y * 128) + (x / 2);
-                        byte currentByte = _TextureData[poly.textureID][dataOffset];
-                        int leftPixel = (int)currentByte & 0x0F;
-                        int rightPixel = (int)((currentByte & 0xF0) >> 4);
-                        Color leftPixelColour = palette[leftPixel];
-                        Color rightPixelColour = palette[rightPixel];
-                        _Textures[poly.textureID].SetPixel(x, y, leftPixelColour);
-                        _Textures[poly.textureID].SetPixel((x + 1), y, rightPixelColour);
-                    }
-                }
-            }
-            #endregion
-
-            int texNum = 0;
 
             if (!drawGreyScaleFirst)
             {
                 // find the most frequently-used palette
-                string palID = "";
-                int palCount = 0;
-                foreach (string pID in palettes.Keys)
+                Color[] commonPalette = null;
+                try
                 {
-                    int pCount = (int)palettes[pID];
-                    if (pCount > palCount)
+                    string palID = "";
+                    int palCount = 0;
+                    foreach (string pID in palettes.Keys)
                     {
-                        palID = pID;
-                    }
-                }
-                string[] palDecode = palID.Split('-');
-                int mostCommonPaletteColumn = int.Parse(palDecode[0]);
-                int mostCommonPaletteRow = int.Parse(palDecode[1]);
-                Color[] commonPalette = GetPalette(mostCommonPaletteColumn, mostCommonPaletteRow);
-
-                for (texNum = 0; texNum <= _Textures.GetUpperBound(0); texNum++)
-                {
-                    for (int y = 0; y < 256; y++)
-                    {
-                        for (int x = 0; x < 256; x += 2)
+                        int pCount = (int)palettes[pID];
+                        if (pCount > palCount)
                         {
-                            bool leftPixChroma = (_Textures[texNum].GetPixel(x, y).A == 1);
-                            bool rightPixChroma = (_Textures[texNum].GetPixel((x + 1), y).A == 1);
-                            if (leftPixChroma || rightPixChroma)
+                            palID = pID;
+                        }
+                    }
+                    string[] palDecode = palID.Split('-');
+                    int mostCommonPaletteColumn = int.Parse(palDecode[0]);
+                    int mostCommonPaletteRow = int.Parse(palDecode[1]);
+                    commonPalette = GetPalette(mostCommonPaletteColumn, mostCommonPaletteRow);
+                }
+                catch
+                {
+                    commonPalette = GetGreyscalePalette();
+                }
+
+                for (int y = 0; y < 256; y++)
+                {
+                    for (int x = 0; x < 256; x += 2)
+                    {
+                        bool leftPixChroma = (allPixels[x, y].A == 1);
+                        bool rightPixChroma = (allPixels[x + 1, y].A == 1);
+                        if (leftPixChroma || rightPixChroma)
+                        {
+                            int dataOffset = (y * 128) + (x / 2);
+                            byte currentByte = _TextureData[index][dataOffset];
+                            int leftPixel = (int)currentByte & 0x0F;
+                            int rightPixel = (int)((currentByte & 0xF0) >> 4);
+                            Color leftPixelColour = commonPalette[leftPixel];
+                            Color rightPixelColour = commonPalette[rightPixel];
+                            if (leftPixChroma)
                             {
-                                int dataOffset = (y * 128) + (x / 2);
-                                byte currentByte = _TextureData[texNum][dataOffset];
-                                int leftPixel = (int)currentByte & 0x0F;
-                                int rightPixel = (int)((currentByte & 0xF0) >> 4);
-                                Color leftPixelColour = commonPalette[leftPixel];
-                                Color rightPixelColour = commonPalette[rightPixel];
-                                if (leftPixChroma)
-                                {
-                                    _Textures[texNum].SetPixel(x, y, leftPixelColour);
-                                }
-                                if (rightPixChroma)
-                                {
-                                    _Textures[texNum].SetPixel((x + 1), y, rightPixelColour);
-                                }
+                                allPixels[x, y] = leftPixelColour;
+                            }
+                            if (rightPixChroma)
+                            {
+                                allPixels[x + 1, y] = rightPixelColour;
                             }
                         }
                     }
                 }
             }
 
-            // dump all textures as PNGs for debugging
-            //texNum = 0;
-            //foreach (Bitmap tex in _Textures)
-            //{
-            //    tex.Save(@"C:\Debug\Tex-" + texNum + ".png", ImageFormat.Png);
-            //    texNum++;
-            //}
-        }
-
-        protected override D3D.Texture _GetTexture(D3D.Device device, int index)
-        {
-            return D3D.Texture.FromBitmap(device, _GetTextureAsBitmap(index), 0, D3D.Pool.Managed);
-        }
-
-        protected override Bitmap _GetTextureAsBitmap(int index)
-        {
-            if (_Textures[index] == null)
-            {
-                if (_PolygonData != null)
-                {
-                    BuildTextureFromPolygonData(index, true);
-                }
-                else
-                {
-                    _Textures[index] = GetTextureAsBitmap(index, GetGreyscalePalette());
-                }
-            }
-
-            return _Textures[index];
-        }
-
-        protected System.Drawing.Bitmap GetTextureAsBitmap(int index, Color[] palette)
-        {
             Bitmap retBitmap = new Bitmap(256, 256);
-
-            int byteNum = 0;
             for (int y = 0; y < 256; y++)
             {
-                for (int x = 0; x < 256; x += 2)
+                for (int x = 0; x < 256; x++)
                 {
-                    byte currentByte = _TextureData[index][byteNum];
-                    int leftPixel = (int)currentByte & 0x0F;
-                    int rightPixel = (int)((currentByte & 0xF0) >> 4);
-                    retBitmap.SetPixel(x, y, palette[leftPixel]);
-                    retBitmap.SetPixel(x + 1, y, palette[rightPixel]);
-                    byteNum++;
+                    retBitmap.SetPixel(x, y, allPixels[x, y]);
                 }
             }
+
+            //Rectangle rect = new Rectangle(0, 0, 256, 256);
+            //BitmapData data = _Textures[index].LockBits(
+            //    rect, ImageLockMode.WriteOnly, Imaging.PixelFormat.Format32bppArgb);
+            //IntPtr scan = data.Scan0;
+            //byte[] result = new byte[allPixels.Length * sizeof(int)];
+            //Buffer.BlockCopy(allPixels, 0, result, 0, result.Length);
+            //System.Runtime.InteropServices.Marshal.Copy(result, 0, scan, result.Length);
 
             return retBitmap;
         }
@@ -778,13 +577,13 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             Bitmap tex = new Bitmap(1, 1);
             if (_Textures[index] == null)
             {
-                tex = GetTextureAsBitmap(index, GetGreyscalePalette());
+                tex = _GetTextureAsBitmap(index, GetGreyscalePalette());
             }
             else
             {
                 tex = _Textures[index];
             }
-            tex.Save(outPath, System.Drawing.Imaging.ImageFormat.Png);
+            tex.Save(outPath, ImageFormat.Png);
         }
     }
 }

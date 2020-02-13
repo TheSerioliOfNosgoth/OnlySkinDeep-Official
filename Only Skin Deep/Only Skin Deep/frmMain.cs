@@ -435,15 +435,15 @@ namespace Only_Skin_Deep
         {
             bool openSuccess = true;
             string failureReason = "";
-            try
-            {
+            //try
+            //{
                 LoadFile(path);
-            }
-            catch (Exception ex)
-            {
-                openSuccess = false;
-                failureReason = ex.Message;
-            }
+            //}
+            //catch (Exception ex)
+            //{
+            //    openSuccess = false;
+            //    failureReason = ex.Message;
+            //}
 
             lvTextureList.Items.Clear();
 
