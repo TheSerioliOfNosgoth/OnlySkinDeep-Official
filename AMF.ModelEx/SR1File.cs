@@ -3,7 +3,7 @@ using System.IO;
 
 namespace AMF.ModelEx
 {
-    public enum GexModelType
+    public enum SR1ModelType
     {
         SoulReaverPlaystation,
         SoulReaverPC,
@@ -165,8 +165,8 @@ namespace AMF.ModelEx
             set { isObject = !value; }
         }
 
-        protected GexModelType _ModelType;
-        public GexModelType ModelType
+        protected SR1ModelType _ModelType;
+        public SR1ModelType ModelType
         {
             get
             {
@@ -422,7 +422,7 @@ namespace AMF.ModelEx
 			{3452, -4, -2203}
         };
 
-        public SR1File(string fileName, GexModelType modelType)
+        public SR1File(string fileName, SR1ModelType modelType)
         {
             _ModelType = modelType;
             FileStream file = new FileStream(fileName, FileMode.Open, FileAccess.Read);
@@ -767,7 +767,7 @@ namespace AMF.ModelEx
 
             switch (_ModelType)
             {
-                case GexModelType.SoulReaverPlaystation:
+                case SR1ModelType.SoulReaverPlaystation:
                     // Playstation textures
                     polygon.v1.rawU = reader.ReadByte();
                     polygon.v1.rawV = reader.ReadByte();
@@ -795,7 +795,7 @@ namespace AMF.ModelEx
                     polygon.v3.u = ((float)(polygon.v3.rawU) / 255.0f);
                     polygon.v3.v = ((float)(polygon.v3.rawV) / 255.0f);
                     break;
-                case GexModelType.SoulReaverPC:
+                case SR1ModelType.SoulReaverPC:
                     // PC textures
                     polygon.v1.rawU = reader.ReadByte();
                     polygon.v1.rawV = reader.ReadByte();
@@ -812,7 +812,7 @@ namespace AMF.ModelEx
                     polygon.v3.u = ((float)(polygon.v3.rawU) / 255f) + (0.5f / 255f);
                     polygon.v3.v = ((float)(polygon.v3.rawV) / 255f) + (0.5f / 255f);
                     break;
-                case GexModelType.SoulReaverDreamcast:
+                case SR1ModelType.SoulReaverDreamcast:
                     // DC textures
                     ushort int1 = reader.ReadUInt16();
                     ushort int2 = reader.ReadUInt16();

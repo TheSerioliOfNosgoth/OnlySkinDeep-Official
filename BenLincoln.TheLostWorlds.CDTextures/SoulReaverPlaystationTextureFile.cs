@@ -69,7 +69,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             {
                 try
                 {
-                    AMEX.SR1File meshFile = new AMEX.SR1File(pcmFileName, AMF.ModelEx.GexModelType.SoulReaverPlaystation);
+                    AMEX.SR1File meshFile = new AMEX.SR1File(pcmFileName, AMF.ModelEx.SR1ModelType.SoulReaverPlaystation);
                     // copy the polygon data for texturing
                     _PolygonData = new SoulReaverPlaystationPolygonTextureData[meshFile.polygonCount];
                     int polyNum = 0;
