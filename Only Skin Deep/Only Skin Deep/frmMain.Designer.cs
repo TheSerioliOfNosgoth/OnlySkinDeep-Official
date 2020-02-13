@@ -71,12 +71,12 @@ namespace Only_Skin_Deep
             this.btnOpen = new BenLincoln.UI.HoverImageButton();
             this.pnlInformation = new System.Windows.Forms.Panel();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.txtInformation = new System.Windows.Forms.TextBox();
             this.pictureBox = new System.Windows.Forms.PictureBox();
             this.lvTextureList = new Only_Skin_Deep.ListViewEx();
             this.chID = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.chName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.chSize = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.txtInformation = new System.Windows.Forms.TextBox();
             this.mnuMenu.SuspendLayout();
             this.pnlButtons.SuspendLayout();
             this.pnlInformation.SuspendLayout();
@@ -180,11 +180,12 @@ namespace Only_Skin_Deep
             this.btnSave.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnSave.ImageIndex = 1;
             this.btnSave.ImageList = this.ilOpen;
-            this.btnSave.Location = new System.Drawing.Point(63, 3);
+            this.btnSave.Location = new System.Drawing.Point(358, 3);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(54, 54);
             this.btnSave.TabIndex = 3;
             this.btnSave.UseVisualStyleBackColor = true;
+            this.btnSave.Visible = false;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
             // ilOpen
@@ -201,11 +202,12 @@ namespace Only_Skin_Deep
             this.btnImportCurrent.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnImportCurrent.ImageIndex = 1;
             this.btnImportCurrent.ImageList = this.ilExportCurrent;
-            this.btnImportCurrent.Location = new System.Drawing.Point(243, 3);
+            this.btnImportCurrent.Location = new System.Drawing.Point(418, 3);
             this.btnImportCurrent.Name = "btnImportCurrent";
             this.btnImportCurrent.Size = new System.Drawing.Size(54, 54);
             this.btnImportCurrent.TabIndex = 6;
             this.btnImportCurrent.UseVisualStyleBackColor = true;
+            this.btnImportCurrent.Visible = false;
             this.btnImportCurrent.Click += new System.EventHandler(this.btnImportCurrent_Click);
             // 
             // ilExportCurrent
@@ -222,7 +224,7 @@ namespace Only_Skin_Deep
             this.btnExportCurrent.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnExportCurrent.ImageIndex = 1;
             this.btnExportCurrent.ImageList = this.ilExportCurrent;
-            this.btnExportCurrent.Location = new System.Drawing.Point(183, 3);
+            this.btnExportCurrent.Location = new System.Drawing.Point(123, 3);
             this.btnExportCurrent.Name = "btnExportCurrent";
             this.btnExportCurrent.Size = new System.Drawing.Size(54, 54);
             this.btnExportCurrent.TabIndex = 5;
@@ -235,7 +237,7 @@ namespace Only_Skin_Deep
             this.btnExportRawData.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnExportRawData.ImageIndex = 1;
             this.btnExportRawData.ImageList = this.ilExportAll;
-            this.btnExportRawData.Location = new System.Drawing.Point(303, 3);
+            this.btnExportRawData.Location = new System.Drawing.Point(183, 3);
             this.btnExportRawData.Name = "btnExportRawData";
             this.btnExportRawData.Size = new System.Drawing.Size(54, 54);
             this.btnExportRawData.TabIndex = 7;
@@ -257,7 +259,7 @@ namespace Only_Skin_Deep
             this.btnExportAll.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnExportAll.ImageIndex = 1;
             this.btnExportAll.ImageList = this.ilExportAll;
-            this.btnExportAll.Location = new System.Drawing.Point(123, 0);
+            this.btnExportAll.Location = new System.Drawing.Point(63, 3);
             this.btnExportAll.Name = "btnExportAll";
             this.btnExportAll.Size = new System.Drawing.Size(54, 54);
             this.btnExportAll.TabIndex = 4;
@@ -306,16 +308,6 @@ namespace Only_Skin_Deep
             this.splitContainer1.SplitterDistance = 300;
             this.splitContainer1.TabIndex = 4;
             // 
-            // txtInformation
-            // 
-            this.txtInformation.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.txtInformation.Location = new System.Drawing.Point(0, 419);
-            this.txtInformation.Multiline = true;
-            this.txtInformation.Name = "txtInformation";
-            this.txtInformation.ReadOnly = true;
-            this.txtInformation.Size = new System.Drawing.Size(484, 55);
-            this.txtInformation.TabIndex = 0;
-            // 
             // pictureBox
             // 
             this.pictureBox.BackColor = System.Drawing.Color.Black;
@@ -359,6 +351,16 @@ namespace Only_Skin_Deep
             // 
             this.chSize.Text = "Size";
             this.chSize.Width = 100;
+            // 
+            // txtInformation
+            // 
+            this.txtInformation.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.txtInformation.Location = new System.Drawing.Point(0, 419);
+            this.txtInformation.Multiline = true;
+            this.txtInformation.Name = "txtInformation";
+            this.txtInformation.ReadOnly = true;
+            this.txtInformation.Size = new System.Drawing.Size(484, 55);
+            this.txtInformation.TabIndex = 0;
             // 
             // frmMain
             // 

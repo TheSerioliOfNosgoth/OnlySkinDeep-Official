@@ -122,7 +122,6 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                         default:
                             throw new NotImplementedException("Support for type '" + _TextureDefinitions[textureNum].Type.ToString() +
                                 "' files is not yet implemented.");
-                            break;
                     }
                     ushort val4 = iReader.ReadUInt16();
                     ushort val5 = iReader.ReadUInt16();
@@ -272,7 +271,6 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                         default:
                             throw new NotImplementedException("Support for type '" + _TextureDefinitions[textureNum].Type.ToString() +
                                 "' files is not yet implemented.");
-                            break;
                     }
                     ushort val4 = iReader.ReadUInt16();
                     ushort val5 = iReader.ReadUInt16();
@@ -445,7 +443,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                 ArrayList parmList = (ArrayList)parms;
                 ExportFile((int)parmList[0], (int)parmList[1], (string)parmList[2]);
             }
-            catch (InvalidCastException ex)
+            catch (InvalidCastException)
             {
                 throw new InvalidCastException("Passed object must be an arraylist with the first and second elements being an int and the third a string.");
             }
@@ -468,13 +466,10 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             {
                 case VRMFormat.PS2_8Bit_Indexed:
                     return _GetIndexedTextureAsBitmap(index, mipMapNumber);
-                    break;
                 case VRMFormat.PS2_ARGB:
                     return _GetARGBTextureAsBitmap(index, mipMapNumber);
-                    break;
                 default:
                     throw new NotImplementedException();
-                    break;
             }
         }
 

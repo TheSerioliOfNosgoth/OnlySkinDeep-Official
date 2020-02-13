@@ -245,7 +245,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                 ArrayList parmList = (ArrayList)parms;
                 ExportFile((int)parmList[0], (string)parmList[1]);
             }
-            catch (InvalidCastException ex)
+            catch (InvalidCastException)
             {
                 throw new InvalidCastException("Passed object must be an arraylist with the first element being an int and the second a string.");
             }
@@ -265,21 +265,15 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                 case ".vrm":
                     // determine if PC / Playstation / etc
                     return VRMTextureFile.GetVRMType(path);
-                    break;
                 case ".big":
                     return TextureFileType.SoulReaverPC;
-                    break;
                 case ".vq":
                     return TextureFileType.SoulReaverDreamcast;
-                    break;
                 case ".crm":
                     return TextureFileType.SoulReaverPlaystation;
-                    break;
                 default:
                     return TextureFileType.Unknown;
-                    break;
             }
-            return TextureFileType.Unknown;
         }
     }
 }

@@ -31,7 +31,6 @@ using System.Windows.Forms;
 using CDT = BenLincoln.TheLostWorlds.CDTextures;
 using BLS = BenLincoln.Shared;
 using BLUI = BenLincoln.UI;
-using AMEX = AMF.ModelEx;
 
 namespace Only_Skin_Deep
 {
@@ -338,7 +337,7 @@ namespace Only_Skin_Deep
             {
                 parms = (BatchExportParameters)oParms;
             }
-            catch (InvalidCastException iEx)
+            catch (InvalidCastException)
             {
                 throw new InvalidCastException("Passed value must be an instance of BatchExportParameters.");
             }
@@ -514,8 +513,6 @@ namespace Only_Skin_Deep
                     _File = new CDT.SoulReaverPlaystationTextureFile(path);
                     break;
                 case CDT.TextureFileType.SoulReaver2Playstation2:
-                    //throw new Exception("PS2 VRM files are not yet supported.");
-                    //_File = null;
                     _File = new CDT.SoulReaver2PS2VRMTextureFile(path);
                     break;
                 case CDT.TextureFileType.SoulReaver2PC:
@@ -693,7 +690,7 @@ namespace Only_Skin_Deep
             {
                 parms = (ExportParameters)oParms;
             }
-            catch (InvalidCastException iEx)
+            catch (InvalidCastException)
             {
                 throw new InvalidCastException("Passed value must be an instance of ExportParameters.");
             }
@@ -739,7 +736,6 @@ namespace Only_Skin_Deep
                     break;
                 default:
                     throw new Exception("Only Skin Deep is unable to export from Unknown file types.");
-                    break;
             }
 
             Invoke(new MethodInvoker(DestroyProgressWindow));
@@ -806,7 +802,7 @@ namespace Only_Skin_Deep
             {
                 parms = (ExportParameters)oParms;
             }
-            catch (InvalidCastException iEx)
+            catch (InvalidCastException)
             {
                 throw new InvalidCastException("Passed value must be an instance of ExportParameters.");
             }
@@ -841,7 +837,6 @@ namespace Only_Skin_Deep
                     break;
                 default:
                     throw new Exception("Only Skin Deep is unable to export from Unknown file types.");
-                    break;
             }
 
             Invoke(new MethodInvoker(DestroyProgressWindow));
@@ -1038,52 +1033,6 @@ namespace Only_Skin_Deep
 
         protected void ExportAllSoulReaverPlaystation(string path, bool batchMode)
         {
-            string pcmFileName = Path.GetDirectoryName(_File.FilePath) + @"\" +
-                Path.GetFileNameWithoutExtension(_File.FilePath) + ".pcm";
-            CDT.SoulReaverPlaystationTextureFile pcm = (CDT.SoulReaverPlaystationTextureFile)_File;
-            bool usePolygonData = true;
-            CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[] gexPolygons =
-                new CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[0];
-            if (File.Exists(pcmFileName))
-            {
-                try
-                {
-                    AMEX.GexFile meshFile = new AMEX.GexFile(pcmFileName, AMF.ModelEx.GexModelType.SoulReaverPlaystation);
-                    // copy the polygon data for texturing
-                    gexPolygons =
-                        new CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[meshFile.polygonCount];
-                    int polyNum = 0;
-                    foreach (AMEX.ExPolygon poly in meshFile.polygons)
-                    {
-                        gexPolygons[polyNum].paletteColumn = poly.paletteColumn;
-                        gexPolygons[polyNum].paletteRow = poly.paletteRow;
-                        gexPolygons[polyNum].u = new int[3];
-                        gexPolygons[polyNum].v = new int[3];
-                        gexPolygons[polyNum].u[0] = (int)poly.v1.rawU;
-                        gexPolygons[polyNum].u[1] = (int)poly.v2.rawU;
-                        gexPolygons[polyNum].u[2] = (int)poly.v3.rawU;
-                        gexPolygons[polyNum].v[0] = (int)poly.v1.rawV;
-                        gexPolygons[polyNum].v[1] = (int)poly.v2.rawV;
-                        gexPolygons[polyNum].v[2] = (int)poly.v3.rawV;
-                        gexPolygons[polyNum].textureID = poly.material.textureID;
-                        polyNum++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    usePolygonData = false;
-                }
-            }
-            else
-            {
-                usePolygonData = false;
-            }
-            Console.WriteLine("Exporting " + _File.FilePath);
-            if (usePolygonData)
-            {
-                Console.WriteLine("Using PCM file " + pcmFileName);
-                pcm.BuildTexturesFromPolygonData(gexPolygons, false, true);
-            }
             for (int i = 0; i < _File.TextureCount; i++)
             {
                 int texNum = i + 1;
@@ -1256,52 +1205,6 @@ namespace Only_Skin_Deep
 
         protected void ExportSoulReaverPlaystation(string path, int index)
         {
-            string pcmFileName = Path.GetDirectoryName(_File.FilePath) + @"\" +
-                Path.GetFileNameWithoutExtension(_File.FilePath) + ".pcm";
-            CDT.SoulReaverPlaystationTextureFile pcm = (CDT.SoulReaverPlaystationTextureFile)_File;
-            bool usePolygonData = true;
-            CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[] gexPolygons =
-                new CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[0];
-            if (File.Exists(pcmFileName))
-            {
-                try
-                {
-                    AMEX.GexFile meshFile = new AMEX.GexFile(pcmFileName, AMF.ModelEx.GexModelType.SoulReaverPlaystation);
-                    // copy the polygon data for texturing
-                    gexPolygons =
-                        new CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[meshFile.polygonCount];
-                    int polyNum = 0;
-                    foreach (AMEX.ExPolygon poly in meshFile.polygons)
-                    {
-                        gexPolygons[polyNum].paletteColumn = poly.paletteColumn;
-                        gexPolygons[polyNum].paletteRow = poly.paletteRow;
-                        gexPolygons[polyNum].u = new int[3];
-                        gexPolygons[polyNum].v = new int[3];
-                        gexPolygons[polyNum].u[0] = (int)poly.v1.rawU;
-                        gexPolygons[polyNum].u[1] = (int)poly.v2.rawU;
-                        gexPolygons[polyNum].u[2] = (int)poly.v3.rawU;
-                        gexPolygons[polyNum].v[0] = (int)poly.v1.rawV;
-                        gexPolygons[polyNum].v[1] = (int)poly.v2.rawV;
-                        gexPolygons[polyNum].v[2] = (int)poly.v3.rawV;
-                        gexPolygons[polyNum].textureID = poly.material.textureID;
-                        polyNum++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    usePolygonData = false;
-                }
-            }
-            else
-            {
-                usePolygonData = false;
-            }
-            Console.WriteLine("Exporting " + _File.FilePath);
-            if (usePolygonData)
-            {
-                Console.WriteLine("Using PCM file " + pcmFileName);
-                pcm.BuildTexturesFromPolygonData(gexPolygons, false, true);
-            }
             int texNum = index + 1;
             _ProgressWindow.SetMessage("Exporting Texture " + texNum.ToString() + " of " + _File.TextureCount.ToString());
             string outPath = path + @"\" + _File.GetTextureName(index) + ".png";

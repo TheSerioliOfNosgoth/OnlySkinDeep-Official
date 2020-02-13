@@ -122,10 +122,6 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\AMF.ModelEx\AMF.ModelEx.csproj">
-      <Project>{C88B1CA5-7C14-43D3-94AB-D627A649C35A}</Project>
-      <Name>AMF.ModelEx</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\BenLincoln.Shared\BenLincoln.Shared.csproj">
       <Project>{7B51BB34-8453-4ED0-AAD9-1E0A82458386}</Project>
       <Name>BenLincoln.Shared</Name>

@@ -342,7 +342,6 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                         default:
                             throw new NotImplementedException("Support for type '" + _TextureDefinitions[i].Type.ToString() +
                                 "' files is not yet implemented.");
-                            break;
                     }
                     _TextureDefinitions[i].Height = iReader.ReadUInt16();
                     _TextureDefinitions[i].Width = iReader.ReadUInt16();
@@ -399,10 +398,8 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             {
                 case VRMFormat.Uncompressed:
                     return GetUncompressedDataAsStream(index);
-                    break;
                 default:
                     return GetDXTCDataAsStream(index);
-                    break;
             }
         }
 
@@ -730,16 +727,19 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             switch (_TextureDefinitions[index].Format)
             {
                 case VRMFormat.DXTC1:
-                    // don't know of a way to do this without a hack involving rendering the texture to 
-                    // a hidden panel and capturing that
-                    throw new Exception("The method or operation is not implemented.");
-                    break;
+                    {
+                        MemoryStream stream = GetDXTCDataAsStream(index);
+                        Soeminnminn.ImageFormats.DDSImage image = new Soeminnminn.ImageFormats.DDSImage(stream);
+                        return image.BitmapImage;
+                    }
                 case VRMFormat.DXTC5:
-                    throw new Exception("The method or operation is not implemented.");
-                    break;
+                    {
+                        MemoryStream stream = GetDXTCDataAsStream(index);
+                        Soeminnminn.ImageFormats.DDSImage image = new Soeminnminn.ImageFormats.DDSImage(stream);
+                        return image.BitmapImage;
+                    }
                 case VRMFormat.Uncompressed:
                     return GetUncompressedTextureAsBitmap(index);
-                    break;
             }
             throw new Exception("The method or operation is not implemented.");
         }

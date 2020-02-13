@@ -55,11 +55,11 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             }
             ushort iGT, jGT;
             ushort a, r, g, b, pixelData;
-            int aFactor, rFactor, gFactor, bFactor;
+            int /*aFactor,*/ rFactor, gFactor, bFactor;
             Bitmap retBitmap;
             Color colour;
 
-            aFactor = 8;
+            //aFactor = 8;
             rFactor = 3;
             gFactor = 3;
             bFactor = 3;

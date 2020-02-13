@@ -160,7 +160,6 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             {
                 throw new TextureFileException("Error reading file '" + path + "' to determine type.", ex);
             }
-            return TextureFileType.SoulReaver2PC;
         }
     }
 }

@@ -137,7 +137,7 @@ namespace AMF.ModelEx
             }
         }
     }
-    public class GexFile
+    public class SR1File
     {
         public String modelName;
         public UInt32 dataStart;
@@ -422,7 +422,7 @@ namespace AMF.ModelEx
 			{3452, -4, -2203}
         };
 
-        public GexFile(string fileName, GexModelType modelType)
+        public SR1File(string fileName, GexModelType modelType)
         {
             _ModelType = modelType;
             FileStream file = new FileStream(fileName, FileMode.Open, FileAccess.Read);
@@ -836,8 +836,6 @@ namespace AMF.ModelEx
                     break;
             }
 
-            ////Console.WriteLine(int1 + "\t" + int2 + "\t" + int3 + "\t" + int4 + "\t" + int5 + "\t" + int6);
-
             return;
         }
 
@@ -848,7 +846,6 @@ namespace AMF.ModelEx
             ushort exponent;
             int unbiasedExponent;
             ushort significand;
-            bool positive = true;
             //ushort signCheck = bizarreFloat;
             //signCheck = signCheck >> 15;
 
