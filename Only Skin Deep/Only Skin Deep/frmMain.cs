@@ -30,7 +30,8 @@ using System.Threading;
 using System.Windows.Forms;
 using BLS = BenLincoln.Shared;
 using BLUI = BenLincoln.UI;
-using CDO = AMF.TheLostWorlds.CDObjects;
+using CDO = CDC.Objects;
+using CDM = CDC.Objects.Models;
 using CDT = BenLincoln.TheLostWorlds.CDTextures;
 using CDT_SRPSTextureFile = BenLincoln.TheLostWorlds.CDTextures.SoulReaverPlaystationTextureFile;
 using CDT_SRPSPolygonTextureData = BenLincoln.TheLostWorlds.CDTextures.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData;
@@ -688,9 +689,9 @@ namespace Only_Skin_Deep
                     ExportResult.AddToList(exportResults, ExportResultType.Success, FileType.Object, objectFileName);
 
                     #region Connected Units
-                    for (int u = 0; u < objectFile.m_uConnectedUnitCount; u++)
+                    for (int u = 0; u < objectFile.ConectedUnitCount; u++)
                     {
-                        String connectedObjectFileName = Path.GetDirectoryName(objectFileName) + @"\" + objectFile.m_astrConnectedUnit[u] + ".pcm";
+                        String connectedObjectFileName = Path.GetDirectoryName(objectFileName) + @"\" + objectFile.ConnectedUnit[u] + ".pcm";
                         try
                         {
                             CDO.SR1File connectedObjectFile = new CDO.SR1File(connectedObjectFileName);
@@ -723,7 +724,7 @@ namespace Only_Skin_Deep
                     int numPolygons = 0;
                     foreach (CDO.SR1File srFile in objectFiles)
                     {
-                        foreach (CDO.SR1Model model in srFile.m_axModels)
+                        foreach (CDM.SRModel model in srFile.Models)
                         {
                             numPolygons += (int)model.PolygonCount;
                         }
@@ -734,20 +735,20 @@ namespace Only_Skin_Deep
                     int currentPolygon = 0;
                     foreach (CDO.SR1File srFile in objectFiles)
                     {
-                        foreach (CDO.SR1Model model in srFile.m_axModels)
+                        foreach (CDM.SRModel model in srFile.Models)
                         {
-                            foreach (CDO.ExPolygon poly in model.Polygons)
+                            foreach (CDC.Polygon poly in model.Polygons)
                             {
                                 polygonData[currentPolygon].paletteColumn = poly.paletteColumn;
                                 polygonData[currentPolygon].paletteRow = poly.paletteRow;
                                 polygonData[currentPolygon].u = new int[3];
                                 polygonData[currentPolygon].v = new int[3];
-                                polygonData[currentPolygon].u[0] = model.UVs[poly.v1.UVID].uRaw;
-                                polygonData[currentPolygon].u[1] = model.UVs[poly.v2.UVID].uRaw;
-                                polygonData[currentPolygon].u[2] = model.UVs[poly.v3.UVID].uRaw;
-                                polygonData[currentPolygon].v[0] = model.UVs[poly.v1.UVID].vRaw;
-                                polygonData[currentPolygon].v[1] = model.UVs[poly.v2.UVID].vRaw;
-                                polygonData[currentPolygon].v[2] = model.UVs[poly.v3.UVID].vRaw;
+                                polygonData[currentPolygon].u[0] = (int)(model.UVs[poly.v1.UVID].u * 255);
+                                polygonData[currentPolygon].u[1] = (int)(model.UVs[poly.v2.UVID].u * 255);
+                                polygonData[currentPolygon].u[2] = (int)(model.UVs[poly.v3.UVID].u * 255);
+                                polygonData[currentPolygon].v[0] = (int)(model.UVs[poly.v1.UVID].v * 255);
+                                polygonData[currentPolygon].v[1] = (int)(model.UVs[poly.v2.UVID].v * 255);
+                                polygonData[currentPolygon].v[2] = (int)(model.UVs[poly.v3.UVID].v * 255);
                                 polygonData[currentPolygon].textureID = poly.material.textureID;
                                 currentPolygon++;
                             }

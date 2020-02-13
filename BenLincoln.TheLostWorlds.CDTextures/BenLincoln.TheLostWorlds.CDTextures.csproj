@@ -77,7 +77,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BenLincoln.Playstation2\BenLincoln.Playstation2.csproj">
-      <Project>{1F0C4D97-1322-4304-B872-AB5866C3E9A5}</Project>
+      <Project>{ae366e9e-3b50-4145-bf74-db6be62fd7e0}</Project>
       <Name>BenLincoln.Playstation2</Name>
     </ProjectReference>
     <ProjectReference Include="..\Only Skin Deep\AMF.ImageFormats\Soeminnminn.ImageFormats.csproj">
