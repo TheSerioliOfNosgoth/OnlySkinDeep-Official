@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Only Skin Deep", "Only Skin
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BenLincoln.TheLostWorlds.CDTextures", "..\BenLincoln.TheLostWorlds.CDTextures\BenLincoln.TheLostWorlds.CDTextures.csproj", "{A4587DBF-C10E-44DB-BF51-C1ABF426FA13}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AMF.ModelEx", "..\AMF.ModelEx\AMF.ModelEx.csproj", "{C88B1CA5-7C14-43D3-94AB-D627A649C35A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AMF.TheLostWorlds.CDObjects", "..\AMF.ModelEx\AMF.TheLostWorlds.CDObjects.csproj", "{C88B1CA5-7C14-43D3-94AB-D627A649C35A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BenLincoln.UI", "..\BenLincoln.UI\BenLincoln.UI.csproj", "{22FECB7D-A160-47D4-A7BE-B184BBF8C8D9}"
 EndProject

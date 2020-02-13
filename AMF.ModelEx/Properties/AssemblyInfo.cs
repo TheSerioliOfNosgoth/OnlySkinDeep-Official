@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("AMF.ModelEx")]
+[assembly: AssemblyTitle("AMF.TheLostWorlds.CDObjects")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("AMF.ModelEx")]
+[assembly: AssemblyProduct("AMF.TheLostWorlds.CDObjects")]
 [assembly: AssemblyCopyright("Copyright © 2006-2007 Andrew Fradley")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

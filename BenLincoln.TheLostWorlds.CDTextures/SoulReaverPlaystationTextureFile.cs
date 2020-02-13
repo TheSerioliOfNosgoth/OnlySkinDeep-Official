@@ -27,7 +27,6 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
 using D3D = Microsoft.DirectX.Direct3D;
-using AMEX = AMF.ModelEx;
 
 namespace BenLincoln.TheLostWorlds.CDTextures
 {
@@ -62,38 +61,6 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             _TextureCount = _GetTextureCount();
             _Textures = new Bitmap[_TextureCount];
             _TextureData = ReadTextureData(LoadTextureData());
-
-            string pcmFileName = Path.GetDirectoryName(FilePath) + @"\" +
-                Path.GetFileNameWithoutExtension(FilePath) + ".pcm";
-            if (File.Exists(pcmFileName))
-            {
-                try
-                {
-                    AMEX.SR1File meshFile = new AMEX.SR1File(pcmFileName, AMF.ModelEx.SR1ModelType.SoulReaverPlaystation);
-                    // copy the polygon data for texturing
-                    _PolygonData = new SoulReaverPlaystationPolygonTextureData[meshFile.polygonCount];
-                    int polyNum = 0;
-                    foreach (AMEX.ExPolygon poly in meshFile.polygons)
-                    {
-                        _PolygonData[polyNum].paletteColumn = poly.paletteColumn;
-                        _PolygonData[polyNum].paletteRow = poly.paletteRow;
-                        _PolygonData[polyNum].u = new int[3];
-                        _PolygonData[polyNum].v = new int[3];
-                        _PolygonData[polyNum].u[0] = (int)poly.v1.rawU;
-                        _PolygonData[polyNum].u[1] = (int)poly.v2.rawU;
-                        _PolygonData[polyNum].u[2] = (int)poly.v3.rawU;
-                        _PolygonData[polyNum].v[0] = (int)poly.v1.rawV;
-                        _PolygonData[polyNum].v[1] = (int)poly.v2.rawV;
-                        _PolygonData[polyNum].v[2] = (int)poly.v3.rawV;
-                        _PolygonData[polyNum].textureID = poly.material.textureID;
-                        polyNum++;
-                    }
-                }
-                catch (Exception)
-                {
-                    _PolygonData = null;
-                }
-            }
         }
 
         protected override int _GetTextureCount()
@@ -198,6 +165,11 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             }
 
             return textures;
+        }
+
+        public void CachePolygonData(SoulReaverPlaystationPolygonTextureData[] texData)
+        {
+            _PolygonData = texData;
         }
 
         public void BuildTexturesFromPolygonData(SoulReaverPlaystationPolygonTextureData[] texData, bool drawGreyScaleFirst, bool quantizeBounds)

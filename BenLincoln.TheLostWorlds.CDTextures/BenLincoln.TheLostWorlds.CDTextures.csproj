@@ -76,10 +76,6 @@
     <Compile Include="VRMTextureFile.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\AMF.ModelEx\AMF.ModelEx.csproj">
-      <Project>{c88b1ca5-7c14-43d3-94ab-d627a649c35a}</Project>
-      <Name>AMF.ModelEx</Name>
-    </ProjectReference>
     <ProjectReference Include="..\BenLincoln.Playstation2\BenLincoln.Playstation2.csproj">
       <Project>{1F0C4D97-1322-4304-B872-AB5866C3E9A5}</Project>
       <Name>BenLincoln.Playstation2</Name>

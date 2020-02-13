@@ -28,9 +28,12 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using CDT = BenLincoln.TheLostWorlds.CDTextures;
 using BLS = BenLincoln.Shared;
 using BLUI = BenLincoln.UI;
+using CDO = AMF.TheLostWorlds.CDObjects;
+using CDT = BenLincoln.TheLostWorlds.CDTextures;
+using CDT_SRPSTextureFile = BenLincoln.TheLostWorlds.CDTextures.SoulReaverPlaystationTextureFile;
+using CDT_SRPSPolygonTextureData = BenLincoln.TheLostWorlds.CDTextures.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData;
 
 namespace Only_Skin_Deep
 {
@@ -237,12 +240,6 @@ namespace Only_Skin_Deep
             );
         }
 
-        protected void NotifyNotSupported(string path)
-        {
-            MessageBox.Show("The file '" + path + "' does not appear to be encoded in a supported format.",
-                "Not Supported", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-        }
-
         #endregion
 
         #region Real functions
@@ -343,6 +340,7 @@ namespace Only_Skin_Deep
             }
             Hashtable fileList = parms.FileList;
             Hashtable failures = new Hashtable();
+            List<string> colourMessages = new List<string>();
 
             int currentFile = 1;
             foreach (string inputFile in fileList.Keys)
@@ -355,6 +353,14 @@ namespace Only_Skin_Deep
                 try
                 {
                     LoadFile(inputFile);
+
+                    try
+                    {
+                        String objectFileName = Path.GetDirectoryName(inputFile) + @"\" + Path.GetFileNameWithoutExtension(inputFile) + ".pcm";
+                        ImportColoursFromObject(objectFileName, colourMessages);
+                    }
+                    catch (Exception) { }
+
                     Thread exportThread = new Thread(ExportAll);
                     ExportParameters outParms = new ExportParameters();
                     outParms.Path = (string)fileList[inputFile];
@@ -373,6 +379,24 @@ namespace Only_Skin_Deep
                     failures.Add(inputFile, ex.Message);
                 }
                 currentFile++;
+            }
+
+            if (colourMessages.Count > 0)
+            {
+                DialogResult result = MessageBox.Show("Error importing colours. Some textures may be shown in greyscale.\r\n\r\n" +
+                    "Would like to view the logfile?", "Export Error",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (result == DialogResult.Yes)
+                {
+                    String logFileName = Path.GetTempFileName();
+                    StreamWriter logFile = File.CreateText(logFileName);
+                    foreach (String message in colourMessages)
+                    {
+                        logFile.WriteLine(message);
+                    }
+                    logFile.Close();
+                    System.Diagnostics.Process.Start("notepad.exe", logFileName);
+                }
             }
         }
 
@@ -435,20 +459,29 @@ namespace Only_Skin_Deep
         {
             bool openSuccess = true;
             string failureReason = "";
-            //try
-            //{
+            try
+            {
                 LoadFile(path);
-            //}
-            //catch (Exception ex)
-            //{
-            //    openSuccess = false;
-            //    failureReason = ex.Message;
-            //}
+            }
+            catch (Exception ex)
+            {
+                openSuccess = false;
+                failureReason = ex.Message;
+            }
 
             lvTextureList.Items.Clear();
 
             if ((openSuccess) && (_File != null))
             {
+                List<string> colourMessages = new List<string>();
+
+                try
+                {
+                    String objectFileName = Path.GetDirectoryName(path) + @"\" + Path.GetFileNameWithoutExtension(path) + ".pcm";
+                    ImportColoursFromObject(objectFileName, colourMessages);
+                }
+                catch (Exception) { }
+
                 btnSave.Enabled = true;
                 btnExportAll.Enabled = true;
                 btnExportCurrent.Enabled = true;
@@ -471,15 +504,18 @@ namespace Only_Skin_Deep
                 }
 
                 lvTextureList.Items.AddRange(textureListEntries);
-                lvTextureList.SelectedIndices.Add(0);
+                lvTextureList.Select();
+                lvTextureList.Items[0].Selected = true;
 
-                try
+                if (colourMessages.Count > 0)
                 {
-                    pictureBox.Image = _File.GetTextureAsBitmap(0);
-                }
-                catch (Exception)
-                {
-                    pictureBox.Image = null;
+                    String colourMessage = "Error importing colours. Some textures may be shown in greyscale.\r\n\r\n";
+                    foreach (String message in colourMessages)
+                    {
+                        colourMessage += message;
+                        colourMessage += "\r\n";
+                    }
+                    MessageBox.Show(colourMessage, "Error", MessageBoxButtons.OK);
                 }
             }
             else
@@ -519,9 +555,91 @@ namespace Only_Skin_Deep
                     _File = new CDT.SoulReaver2PCVRMTextureFile(path);
                     break;
                 default:
-                    NotifyNotSupported(path);
-                    _File = null;
-                    break;
+                    throw new Exception("The file '" + path + "' does not appear to be encoded in a supported format.");
+            }
+        }
+
+        protected void ImportColoursFromObject(String mainObjectFileName, List<string> exportMessages)
+        {
+            if (_File != null && _File.FileType == CDT.TextureFileType.SoulReaverPlaystation)
+            {
+                CDT_SRPSPolygonTextureData[] polygonData = null;
+                List<CDO.SR1File> objectFiles = new List<CDO.SR1File>();
+                #region Main Object
+                try
+                {
+                    CDO.SR1File mainObjectFile = new CDO.SR1File(mainObjectFileName);
+                    objectFiles.Add(mainObjectFile);
+
+                    #region Connected Units
+                    for (int u = 0; u < mainObjectFile.m_uConnectedUnitCount; u++)
+                    {
+                        String connectedUnitFileName = Path.GetDirectoryName(mainObjectFileName) + @"\" + mainObjectFile.m_astrConnectedUnit[u] + ".pcm";
+                        try
+                        {
+                            CDO.SR1File connectedSRFile = new CDO.SR1File(connectedUnitFileName);
+                            objectFiles.Add(connectedSRFile);
+                        }
+                        catch (FileNotFoundException)
+                        {
+                            exportMessages.Add("Missing colour file - \"" + connectedUnitFileName + "\"");
+                        }
+                        catch
+                        {
+                            exportMessages.Add("Error reading colour file - \"" + connectedUnitFileName + "\"");
+                        }
+                    }
+                    #endregion
+                }
+                catch (FileNotFoundException)
+                {
+                    exportMessages.Add("Missing colour file - \"" + mainObjectFileName + "\"");
+                }
+                catch
+                {
+                    exportMessages.Add("Error reading colour file - \"" + mainObjectFileName + "\"");
+                }
+                #endregion
+
+                try
+                {
+                    int numPolygons = 0;
+                    foreach (CDO.SR1File srFile in objectFiles)
+                    {
+                        foreach (CDO.SR1Model model in srFile.m_axModels)
+                        {
+                            numPolygons += (int)model.PolygonCount;
+                        }
+                    }
+
+                    polygonData = new CDT_SRPSPolygonTextureData[numPolygons];
+
+                    int currentPolygon = 0;
+                    foreach (CDO.SR1File srFile in objectFiles)
+                    {
+                        foreach (CDO.SR1Model model in srFile.m_axModels)
+                        {
+                            foreach (CDO.ExPolygon poly in model.Polygons)
+                            {
+                                polygonData[currentPolygon].paletteColumn = poly.paletteColumn;
+                                polygonData[currentPolygon].paletteRow = poly.paletteRow;
+                                polygonData[currentPolygon].u = new int[3];
+                                polygonData[currentPolygon].v = new int[3];
+                                polygonData[currentPolygon].u[0] = model.UVs[poly.v1.UVID].uRaw;
+                                polygonData[currentPolygon].u[1] = model.UVs[poly.v2.UVID].uRaw;
+                                polygonData[currentPolygon].u[2] = model.UVs[poly.v3.UVID].uRaw;
+                                polygonData[currentPolygon].v[0] = model.UVs[poly.v1.UVID].vRaw;
+                                polygonData[currentPolygon].v[1] = model.UVs[poly.v2.UVID].vRaw;
+                                polygonData[currentPolygon].v[2] = model.UVs[poly.v3.UVID].vRaw;
+                                polygonData[currentPolygon].textureID = poly.material.textureID;
+                                currentPolygon++;
+                            }
+                        }
+                    }
+
+                    ((CDT_SRPSTextureFile)_File).CachePolygonData(polygonData);
+                }
+                catch (Exception) { }
             }
         }
 

@@ -122,6 +122,10 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\AMF.ModelEx\AMF.TheLostWorlds.CDObjects.csproj">
+      <Project>{c88b1ca5-7c14-43d3-94ab-d627a649c35a}</Project>
+      <Name>AMF.TheLostWorlds.CDObjects</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\BenLincoln.Shared\BenLincoln.Shared.csproj">
       <Project>{7B51BB34-8453-4ED0-AAD9-1E0A82458386}</Project>
       <Name>BenLincoln.Shared</Name>

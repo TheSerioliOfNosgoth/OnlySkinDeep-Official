@@ -1,181 +1,14 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 
-namespace AMF.ModelEx
+namespace AMF.TheLostWorlds.CDObjects
 {
-    public enum SR1ModelType
+    public abstract class SR1Model : SRModel
     {
-        SoulReaverPlaystation,
-        SoulReaverPC,
-        SoulReaverDreamcast
-    }
-
-    public struct ExVector
-    {
-        public Int16 x, y, z;
-        ExVector(Int16 x, Int16 y, Int16 z)
+        #region Normals
+        protected static Int32[,] s_aiNormals =
         {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-        public static ExVector operator +(ExVector v1, ExVector v2)
-        {
-            return new ExVector(
-                (Int16)(v1.x + v2.x),
-                (Int16)(v1.y + v2.y),
-                (Int16)(v1.z + v2.z)
-            );
-        }
-    }
-    public struct ExNormal
-    {
-        public Int32 x, y, z;
-    }
-    public struct ExBone
-    {
-        public UInt16 vFirst, vLast;    // The ID of first and last effected vertex 
-        public ExVector localPos;       // Local bone coordinates
-        public ExVector worldPos;       // World bone coordinated
-        public UInt16 parentID;         // ID of parent bone
-    }
-    public struct ExVertex
-    {
-        public UInt16 index;            // Index in the file
-        public ExVector localPos;       // Local vertex coordinates
-        public ExVector worldPos;       // World vertex coordinates
-        public UInt16 normalID;         // Index of the vertex normal
-        public ExNormal normal;         // Normal for the vertex
-        public UInt32 colour;           // Colour of the vertex
-        public UInt16 boneID;           // Index of the bone effecting this vertex
-        public float u, v;              // Texture coordinates
-        public uint rawU, rawV;         // The raw data for the UV coordinates
-    }
-    public struct ExPolygon
-    {
-        public Boolean isVisible;
-        public ExMaterial material;     // The material used
-        public ExVertex v1, v2, v3;     // Vertices for the polygon
-        public int paletteColumn;       //
-        public int paletteRow;          //
-    }
-    public class ExMaterial
-    {
-        public UInt16 ID;               // The ID of the material
-        public Boolean textureUsed;     // Flag specifying if a texture is used
-        public UInt16 textureID;        // ID of the texture file
-        public UInt32 colour;           // Diffuse colour
-        public String textureName;      // Name of the texture file
-    }
-    public class ExMaterialList
-    {
-        private ExMaterialList _next;
-        public ExMaterialList next
-        {
-            get { return _next; }
-        }
-        public ExMaterial material;
-        public ExMaterialList(ExMaterial material)
-        {
-            this.material = material;
-            _next = null;
-        }
-        // Tries to add the material to the list
-        public ExMaterial AddToList(ExMaterial material)
-        {
-            // Check if the material is already in the list
-            if ((material.textureID == this.material.textureID) &&
-                (material.colour == this.material.colour) &&
-                (material.textureUsed == this.material.textureUsed))
-                return this.material;
-            // Check the rest of the list
-            if (next != null)
-            {
-                return next.AddToList(material);
-            }
-            // Add the material to the list
-            _next = new ExMaterialList(material);
-            return material;
-        }
-    }
-    public class ExBSPTree
-    {
-        public UInt32 dataPos;
-        public Boolean isLeaf;
-        public ExBSPTree leftChild;
-        public ExBSPTree rightChild;
-    }
-    public class ExBSPTreeStack
-    {
-        private class Node
-        {
-            public ExBSPTree tree;
-            public Node lastNode;
-        }
-        private Node currentNode;
-        public void Push(ExBSPTree tree)
-        {
-            Node lastNode = currentNode;
-            currentNode = new Node();
-            currentNode.tree = tree;
-            currentNode.lastNode = lastNode;
-            return;
-        }
-        public ExBSPTree Pop()
-        {
-            if (currentNode == null) return null;
-            ExBSPTree tree = currentNode.tree;
-            currentNode = currentNode.lastNode;
-            return tree;
-        }
-        public ExBSPTree Top
-        {
-            get
-            {
-                if (currentNode == null) return null;
-                return currentNode.tree;
-            }
-        }
-    }
-    public class SR1File
-    {
-        public String modelName;
-        public UInt32 dataStart;
-        public UInt32 modelData;
-        public UInt32 vertexCount;
-        public UInt32 vertexStart;
-        public UInt32 polygonCount;
-        public UInt32 polygonStart;
-        public UInt32 boneCount;
-        public UInt32 boneStart;
-        public UInt32 materialStart;
-        public UInt16 materialCount;
-        public UInt32 bspTreeCount;
-        public UInt32 bspTreeStart;
-        public ExBone[] bones;
-        public UInt16[] indices;
-        public ExVertex[] vertices;
-        public ExPolygon[] polygons;
-        public ExMaterial[] materials;
-        public UInt32 indexCount { get { return 3 * polygonCount; } }
-        public Boolean isObject;
-        public Boolean isArea
-        {
-            get { return !isObject; }
-            set { isObject = !value; }
-        }
-
-        protected SR1ModelType _ModelType;
-        public SR1ModelType ModelType
-        {
-            get
-            {
-                return _ModelType;
-            }
-        }
-
-        private ExMaterialList materialsList;
-        private static Int32[,] normals = {
             {0, 0, 4096},
 			{-1930, -3344, -1365},
 			{3861, 0, -1365},
@@ -421,536 +254,903 @@ namespace AMF.ModelEx
 			{3075, 604, -2637},
 			{3452, -4, -2203}
         };
+        #endregion
 
-        public SR1File(string fileName, SR1ModelType modelType)
+        protected SR1Model(BinaryReader xReader, UInt32 uDataStart, UInt32 uModelData, String strModelName, Platform ePlatform) :
+            base(xReader, uDataStart, uModelData, strModelName, ePlatform)
         {
-            _ModelType = modelType;
-            FileStream file = new FileStream(fileName, FileMode.Open, FileAccess.Read);
-            BinaryReader reader = new BinaryReader(file);
+        }
 
-            // Get start of usefull data
-            dataStart = ((reader.ReadUInt32() >> 9) << 11) + 0x00000800;
-
-            // Get the type of model
-            /*file.Position = dataStart + 0x4C;
-            ulong typeTest1 = reader.ReadUInt64();
-            file.Position = dataStart + 0x58;
-            ulong typeTest2 = reader.ReadUInt64();
-
-            file.Position = dataStart + 0x6C;
-            ulong typeTester = 0xFFFFFFFFFFFFFFFF;
-            if (reader.ReadUInt32() == 0xFFFF63C0)
+        protected virtual void ReadData(BinaryReader xReader)
+        {
+            // Get the normals
+            m_axNormals = new ExVector[s_aiNormals.Length / 3];
+            for (int n = 0; n < m_axNormals.Length; n++)
             {
-                typeTester = 0x0100020000000000;
-            }*/
-
-            file.Position = dataStart + 0x9C;
-            ulong typeTest3 = reader.ReadUInt64();
-
-            if (typeTest3 == 0xFFFFFFFFFFFFFFFF ||
-                typeTest3 == 0x0100020000000000)
-            {
-                isArea = true;
-                MapAreaFile(reader);
+                m_axNormals[n].x = s_aiNormals[n, 0];
+                m_axNormals[n].y = s_aiNormals[n, 1];
+                m_axNormals[n].z = s_aiNormals[n, 2];
             }
-            else
-            {
-                isObject = true;
-                MapObjectFile(reader);
-            }
-
-            // Check for errors
-            if ((dataStart > reader.BaseStream.Length) ||
-                (modelData > reader.BaseStream.Length) ||
-                (vertexStart > reader.BaseStream.Length) ||
-                (polygonStart > reader.BaseStream.Length) ||
-                (boneCount > reader.BaseStream.Length) ||
-                (materialStart > reader.BaseStream.Length))
-                throw new Exception("Wrong file type or not a mesh file");
 
             // Get the vertices
-            ReadVertices(reader);
-
-            if (isObject)
-            {
-                // Get the armature
-                ReadArmature(reader);
-                // Apply the armature to the vertices
-                ApplyArmature();
-            }
+            m_axVertices = new ExVertex[m_uVertexCount];
+            m_axPositions = new ExPosition[m_uVertexCount];
+            m_auColours = new UInt32[m_uVertexCount];
+            ReadVertices(xReader);
 
             // Get the polygons
-            ReadPolygons(reader);
+            m_axPolygons = new ExPolygon[m_uPolygonCount];
+            m_axUVs = new ExUV[m_uIndexCount];
+            ReadPolygons(xReader);
 
-            // Genetate the vertices, indices and materials to be output
-            GenerateOutputData();
-
-            // Close the file
-            reader.Close();
-            file.Close();
-            reader = null;
-            file = null;
+            // Generate the output
+            GenerateOutput();
         }
 
-        private void GenerateOutputData()
+        protected virtual void ReadVertex(BinaryReader xReader, int v)
         {
-            // Make the vertices unique and generate new index array
-            vertices = new ExVertex[indexCount];
-            indices = new UInt16[indexCount];
-            for (UInt16 p = 0; p < polygonCount; p++)
-            {
-                vertices[(3 * p) + 0] = polygons[p].v1;
-                vertices[(3 * p) + 1] = polygons[p].v2;
-                vertices[(3 * p) + 2] = polygons[p].v3;
-                indices[(3 * p) + 0] = (UInt16)((3 * p) + 0);
-                indices[(3 * p) + 1] = (UInt16)((3 * p) + 1);
-                indices[(3 * p) + 2] = (UInt16)((3 * p) + 2);
-            }
+            m_axVertices[v].positionID = v;
 
-            // Build the materials array
-            materials = new ExMaterial[materialCount];
-            UInt16 mNew = 0;
+            // Read the local coordinates
+            m_axPositions[v].localPos.x = (float)xReader.ReadInt16();
+            m_axPositions[v].localPos.y = (float)xReader.ReadInt16();
+            m_axPositions[v].localPos.z = (float)xReader.ReadInt16();
 
-            // Get the untextured materials
-            ExMaterialList matList = materialsList;
-            while (matList != null)
-            {
-                if (!matList.material.textureUsed)
-                {
-                    materials[mNew] = matList.material;
-                    materials[mNew].ID = mNew;
-                    materials[mNew].textureName = "";
-                    mNew++;
-                }
-                matList = matList.next;
-            }
-
-            // Get the textured materials
-            matList = materialsList;
-            while (matList != null)
-            {
-                if (matList.material.textureUsed)
-                {
-                    materials[mNew] = matList.material;
-                    materials[mNew].ID = mNew;
-                    materials[mNew].textureName =
-                        "Texture-" +
-                        materials[mNew].textureID.ToString("00000") +
-                        ".png";
-                    mNew++;
-                }
-                matList = matList.next;
-            }
-            return;
+            // Before transformation, the world coords equal the local coords
+            m_axPositions[v].worldPos = m_axPositions[v].localPos;
         }
 
-        private void MapObjectFile(BinaryReader reader)
+        protected virtual void ReadVertices(BinaryReader xReader)
         {
-            reader.BaseStream.Position = dataStart + 0x00000024;
-            reader.BaseStream.Position = dataStart + reader.ReadUInt32();
-            modelName = new String(reader.ReadChars(8));
-            reader.BaseStream.Position = dataStart + 0x0000000C;
-            reader.BaseStream.Position = dataStart + reader.ReadUInt32();
-            modelData = dataStart + reader.ReadUInt32();
-            reader.BaseStream.Position = modelData;
-            vertexCount = reader.ReadUInt32();
-            vertexStart = dataStart + reader.ReadUInt32();
-            reader.BaseStream.Position += 0x00000008;
-            polygonCount = reader.ReadUInt32();
-            polygonStart = dataStart + reader.ReadUInt32();
-            boneCount = reader.ReadUInt32();
-            boneStart = dataStart + reader.ReadUInt32();
-            materialCount = 0;
+            if (m_uVertexStart == 0 || m_uVertexCount == 0)
+            {
+                return;
+            }
+
+            xReader.BaseStream.Position = m_uVertexStart;
+
+            for (UInt16 v = 0; v < m_uVertexCount; v++)
+            {
+                ReadVertex(xReader, v);
+            }
 
             return;
         }
 
-        private void MapAreaFile(BinaryReader reader)
-        {
-            reader.BaseStream.Position = dataStart + 0x98;
-            reader.BaseStream.Position = dataStart + reader.ReadUInt32();
-            modelName = new String(reader.ReadChars(8));
-            reader.BaseStream.Position = dataStart;
-            modelData = dataStart + reader.ReadUInt32();
-            reader.BaseStream.Position = modelData + 0x10;
-            vertexCount = reader.ReadUInt32();
-            polygonCount = reader.ReadUInt32();
-            reader.BaseStream.Position += 0x04;
-            vertexStart = dataStart + reader.ReadUInt32();
-            polygonStart = dataStart + reader.ReadUInt32();
-            boneCount = 0;
-            boneStart = 0;
-            reader.BaseStream.Position += 0x10;
-            materialStart = dataStart + reader.ReadUInt32();
-            materialCount = 0;
-            reader.BaseStream.Position += 0x0C;
-            bspTreeCount = reader.ReadUInt32();
-            bspTreeStart = dataStart + reader.ReadUInt32();
-            return;
-        }
+        protected abstract void ReadPolygons(BinaryReader xReader);
 
-        private void ReadVertices(BinaryReader reader)
+        protected virtual void ReadMaterial(BinaryReader xReader, int p)
         {
-            if (vertexStart == 0 || vertexCount == 0) return;
+            int v1 = (p * 3) + 0;
+            int v2 = (p * 3) + 1;
+            int v3 = (p * 3) + 2;
 
-            reader.BaseStream.Position = vertexStart;
-            vertices = new ExVertex[vertexCount];
-            for (UInt16 v = 0; v < vertexCount; v++)
+            m_axPolygons[p].v1.UVID = v1;
+            m_axPolygons[p].v2.UVID = v2;
+            m_axPolygons[p].v3.UVID = v3;
+
+            if (m_ePlatform != Platform.Dreamcast)
             {
-                // Read the local coordinates
-                vertices[v].localPos.x = reader.ReadInt16();
-                vertices[v].localPos.y = reader.ReadInt16();
-                vertices[v].localPos.z = reader.ReadInt16();
+                Byte v1U = xReader.ReadByte();
+                Byte v1V = xReader.ReadByte();
 
-                // Before transformation, the world coords equal the local coords
-                vertices[v].worldPos = vertices[v].localPos;
-
-                // If it's an object get the normals
-                if (isObject)
+                if (m_ePlatform == Platform.PSX)
                 {
-                    vertices[v].normalID = reader.ReadUInt16();
-                    vertices[v].normal.x = normals[vertices[v].normalID, 0];
-                    vertices[v].normal.y = normals[vertices[v].normalID, 1];
-                    vertices[v].normal.z = normals[vertices[v].normalID, 2];
-                }
-                // If it's an area get the vertex colours
-                if (isArea)
-                {
-                    reader.BaseStream.Position += 2;
-                    vertices[v].colour = reader.ReadUInt32() | 0xFF000000;
-                    // comment out to correct Dreamcast colours
-                    FlipRedAndBlue(ref vertices[v].colour);
-                }
-
-                // The vertex may need to know it's own ID
-                vertices[v].index = v;
-            }
-            return;
-        }
-
-        private void ReadArmature(BinaryReader reader)
-        {
-            if (boneStart == 0 || boneCount == 0) return;
-
-            reader.BaseStream.Position = boneStart;
-            bones = new ExBone[boneCount];
-            bones = new ExBone[boneCount];
-            for (UInt16 b = 0; b < boneCount; b++)
-            {
-                // Get the bone data
-                reader.BaseStream.Position += 8;
-                bones[b].vFirst = reader.ReadUInt16();
-                bones[b].vLast = reader.ReadUInt16();
-                bones[b].localPos.x = reader.ReadInt16();
-                bones[b].localPos.y = reader.ReadInt16();
-                bones[b].localPos.z = reader.ReadInt16();
-                bones[b].parentID = reader.ReadUInt16();
-
-                // Combine this bone with it's ancestors is there are any
-                if ((bones[b].vFirst != 0xFFFF) && (bones[b].vLast != 0xFFFF))
-                {
-                    for (UInt16 ancestorID = b; ancestorID != 0xFFFF; )
-                    {
-                        bones[b].worldPos += bones[ancestorID].localPos;
-                        if (bones[ancestorID].parentID == ancestorID) break;
-                        ancestorID = bones[ancestorID].parentID;
-                    }
-                }
-                reader.BaseStream.Position += 4;
-            }
-            return;
-        }
-
-        private void ApplyArmature()
-        {
-            if ((vertexStart == 0 || vertexCount == 0) ||
-                (boneStart == 0 || boneCount == 0)) return;
-
-            for (UInt16 b = 0; b < boneCount; b++)
-            {
-                if ((bones[b].vFirst != 0xFFFF) && (bones[b].vLast != 0xFFFF))
-                {
-                    for (UInt16 v = bones[b].vFirst; v <= bones[b].vLast; v++)
-                    {
-                        vertices[v].worldPos += bones[b].worldPos;
-                        vertices[v].boneID = b;
-                    }
-                }
-            }
-            return;
-        }
-
-        private void ReadPolygons(BinaryReader reader)
-        {
-            polygons = new ExPolygon[polygonCount];
-            if (isArea) ReadBSPTree(reader);
-            for (UInt16 p = 0; p < polygonCount; p++)
-            {
-                reader.BaseStream.Position = polygonStart + (p * 12);
-
-                // Copy vertices to the polygon
-                polygons[p].v1 = vertices[reader.ReadUInt16()];
-                polygons[p].v2 = vertices[reader.ReadUInt16()];
-                polygons[p].v3 = vertices[reader.ReadUInt16()];
-
-                polygons[p].material = new ExMaterial();
-
-                if (isObject)
-                {
-                    // Get flag to say if a texture is used
-                    polygons[p].material.textureUsed = (Boolean)(((int)reader.ReadUInt16() & 0x0200) != 0);
-
-                    // Get the texture data if present
-                    if (polygons[p].material.textureUsed)
-                    {
-                        reader.BaseStream.Position = dataStart + reader.ReadInt32();
-                        ReadTextureData(reader, ref polygons[p]);
-                        reader.BaseStream.Position += 2;
-                    }
-                    else
-                    {
-                        reader.BaseStream.Position = polygonStart + (12 * p) + 8;
-                    }
-                    polygons[p].material.colour = reader.ReadUInt32() | 0xFF000000;
-                }
-                if (isArea)
-                {
-                    // Get flag to say if a texture is used.  This needs work...  I improved it though :)
-                    polygons[p].material.textureUsed = (Boolean)(((int)reader.ReadUInt16() & 0x0004) == 0);
-
-                    // Get the texture data if present
-                    reader.BaseStream.Position += 2;
-                    UInt16 materialOffset = reader.ReadUInt16();
-                    if (materialOffset != 0xFFFF &&
-                        polygons[p].material.textureUsed &&
-                        polygons[p].isVisible)
-                    {
-                        reader.BaseStream.Position = materialStart + materialOffset;
-                        ReadTextureData(reader, ref polygons[p]);
-                        polygons[p].material.colour = 0xFFFFFFFF;
-                    }
-                    else
-                    {
-                        polygons[p].material.textureUsed = false;
-                        polygons[p].material.colour = 0x00000000;
-                        polygons[p].v1.colour = 0x00000000;
-                        polygons[p].v2.colour = 0x00000000;
-                        polygons[p].v3.colour = 0x00000000;
-                    }
-                }
-                FlipRedAndBlue(ref polygons[p].material.colour);
-
-                // Add the material to the list
-                if (materialsList == null)
-                {
-                    materialsList = new ExMaterialList(polygons[p].material);
-                    materialCount++;
+                    ushort paletteVal = xReader.ReadUInt16();
+                    ushort rowVal = (ushort)((ushort)(paletteVal << 2) >> 8);
+                    ushort colVal = (ushort)((ushort)(paletteVal << 11) >> 11);
+                    m_axPolygons[p].paletteColumn = colVal;
+                    m_axPolygons[p].paletteRow = rowVal;
                 }
                 else
                 {
-                    ExMaterial newMaterial = materialsList.AddToList(polygons[p].material);
-                    if (polygons[p].material != newMaterial)
+                    m_axPolygons[p].material.textureID = (UInt16)(xReader.ReadUInt16() & 0x07FF);
+                }
+
+                Byte v2U = xReader.ReadByte();
+                Byte v2V = xReader.ReadByte();
+
+                if (m_ePlatform == Platform.PSX)
+                {
+                    m_axPolygons[p].material.textureID = (UInt16)(((xReader.ReadUInt16() & 0x07FF) - 8) % 8);
+                }
+                else
+                {
+                    UInt16 usTemp = xReader.ReadUInt16();
+                }
+
+                Byte v3U = xReader.ReadByte();
+                Byte v3V = xReader.ReadByte();
+
+                m_axUVs[v1].uRaw = v1U;
+                m_axUVs[v1].vRaw = v1V;
+                m_axUVs[v2].uRaw = v2U;
+                m_axUVs[v2].vRaw = v2V;
+                m_axUVs[v3].uRaw = v3U;
+                m_axUVs[v3].vRaw = v3V;
+
+                m_axUVs[v1].u = ((float)v1U) / 255.0f;
+                m_axUVs[v1].v = ((float)v1V) / 255.0f;
+                m_axUVs[v2].u = ((float)v2U) / 255.0f;
+                m_axUVs[v2].v = ((float)v2V) / 255.0f;
+                m_axUVs[v3].u = ((float)v3U) / 255.0f;
+                m_axUVs[v3].v = ((float)v3V) / 255.0f;
+
+                float fCU = (m_axUVs[v1].u + m_axUVs[v2].u + m_axUVs[v3].u) / 3.0f;
+                float fCV = (m_axUVs[v1].v + m_axUVs[v2].v + m_axUVs[v3].v) / 3.0f;
+                float fSizeAdjust = 1.0f / 255.0f;      // 2.0f seems to work better for dreamcast
+                float fOffsetAdjust = 0.5f / 255.0f;
+
+                Utility.AdjustUVs(ref m_axUVs[v1], fCU, fCV, fSizeAdjust, fOffsetAdjust);
+                Utility.AdjustUVs(ref m_axUVs[v2], fCU, fCV, fSizeAdjust, fOffsetAdjust);
+                Utility.AdjustUVs(ref m_axUVs[v3], fCU, fCV, fSizeAdjust, fOffsetAdjust);
+            }
+            else
+            {
+                UInt16 v1U = xReader.ReadUInt16();
+                UInt16 v1V = xReader.ReadUInt16();
+                UInt16 v2U = xReader.ReadUInt16();
+                UInt16 v2V = xReader.ReadUInt16();
+                UInt16 v3U = xReader.ReadUInt16();
+                UInt16 v3V = xReader.ReadUInt16();
+
+                m_axUVs[v1].u = Utility.BizarreFloatToNormalFloat(v1U);
+                m_axUVs[v1].v = Utility.BizarreFloatToNormalFloat(v1V);
+                m_axUVs[v2].u = Utility.BizarreFloatToNormalFloat(v2U);
+                m_axUVs[v2].v = Utility.BizarreFloatToNormalFloat(v2V);
+                m_axUVs[v3].u = Utility.BizarreFloatToNormalFloat(v3U);
+                m_axUVs[v3].v = Utility.BizarreFloatToNormalFloat(v3V);
+
+                m_axPolygons[p].material.textureID = (UInt16)((xReader.ReadUInt16() & 0x07FF) - 1);
+            }
+
+            m_axPolygons[p].material.colour = 0xFFFFFFFF;
+
+            return;
+        }
+
+        protected virtual void GenerateOutput()
+        {
+            // Make the vertices unique
+            m_axVertices = new ExVertex[m_uIndexCount];
+            for (UInt32 p = 0; p < m_uPolygonCount; p++)
+            {
+                m_axVertices[(3 * p) + 0] = m_axPolygons[p].v1;
+                m_axVertices[(3 * p) + 1] = m_axPolygons[p].v2;
+                m_axVertices[(3 * p) + 2] = m_axPolygons[p].v3;
+            }
+
+            // Build the materials array
+            m_axMaterials = new ExMaterial[m_uMaterialCount];
+            UInt16 mNew = 0;
+
+            foreach (ExMaterial xMaterial in m_xMaterialsList)
+            {
+                m_axMaterials[mNew] = xMaterial;
+                m_axMaterials[mNew].ID = mNew;
+                mNew++;
+            }
+
+            return;
+        }
+    }
+
+    public class SR1File : SRFile
+    {
+        #region Model classes
+
+        protected class SR1ObjectModel : SR1Model
+        {
+            protected SR1ObjectModel(BinaryReader xReader, UInt32 uDataStart, UInt32 uModelData, String strModelName, Platform ePlatform)
+                : base (xReader, uDataStart, uModelData, strModelName, ePlatform)
+            {
+                xReader.BaseStream.Position = m_uModelData;
+                m_uVertexCount              = xReader.ReadUInt32();
+                m_uVertexStart              = m_uDataStart + xReader.ReadUInt32();
+                m_xVertexScale.x            = 1.0f;
+                m_xVertexScale.y            = 1.0f;
+                m_xVertexScale.z            = 1.0f;
+                xReader.BaseStream.Position += 0x08;
+                m_uPolygonCount             = xReader.ReadUInt32();
+                m_uPolygonStart             = m_uDataStart + xReader.ReadUInt32();
+                m_uBoneCount                = xReader.ReadUInt32();
+                m_uBoneStart                = m_uDataStart + xReader.ReadUInt32();
+                xReader.BaseStream.Position += 0x10;
+                m_uMaterialStart            = m_uDataStart + xReader.ReadUInt32();
+                m_uMaterialCount            = 0;
+                m_uTreeCount                = 1;
+
+                m_axTrees = new ExTree[m_uTreeCount];
+            }
+
+            public static SR1ObjectModel Load(BinaryReader xReader, UInt32 uDataStart, UInt32 uModelData, String strModelName, Platform ePlatform, UInt16 usIndex)
+            {
+                xReader.BaseStream.Position = uModelData + (0x00000004 * usIndex);
+                uModelData = uDataStart + xReader.ReadUInt32();
+                xReader.BaseStream.Position = uModelData;
+                SR1ObjectModel xModel = new SR1ObjectModel(xReader, uDataStart, uModelData, strModelName, ePlatform);
+                xModel.ReadData(xReader);
+                return xModel;
+            }
+
+            protected override void ReadVertex(BinaryReader xReader, int v)
+            {
+                base.ReadVertex(xReader, v);
+
+                m_axVertices[v].normalID = xReader.ReadUInt16();
+            }
+
+            protected override void ReadVertices(BinaryReader xReader)
+            {
+                base.ReadVertices(xReader);
+
+                ReadArmature(xReader);
+                ApplyArmature();
+            }
+
+            protected virtual void ReadArmature(BinaryReader xReader)
+            {
+                if (m_uBoneStart == 0 || m_uBoneCount == 0) return;
+
+                xReader.BaseStream.Position = m_uBoneStart;
+                m_axBones = new ExBone[m_uBoneCount];
+                m_axBones = new ExBone[m_uBoneCount];
+                for (UInt16 b = 0; b < m_uBoneCount; b++)
+                {
+                    // Get the bone data
+                    xReader.BaseStream.Position += 8;
+                    m_axBones[b].vFirst = xReader.ReadUInt16();
+                    m_axBones[b].vLast = xReader.ReadUInt16();
+                    m_axBones[b].localPos.x = (float)xReader.ReadInt16();
+                    m_axBones[b].localPos.y = (float)xReader.ReadInt16();
+                    m_axBones[b].localPos.z = (float)xReader.ReadInt16();
+                    m_axBones[b].parentID1 = xReader.ReadUInt16();
+
+                    // Combine this bone with it's ancestors is there are any
+                    if ((m_axBones[b].vFirst != 0xFFFF) && (m_axBones[b].vLast != 0xFFFF))
                     {
-                        polygons[p].material = newMaterial;
+                        for (UInt16 ancestorID = b; ancestorID != 0xFFFF; )
+                        {
+                            m_axBones[b].worldPos += m_axBones[ancestorID].localPos;
+                            if (m_axBones[ancestorID].parentID1 == ancestorID) break;
+                            ancestorID = m_axBones[ancestorID].parentID1;
+                        }
+                    }
+                    xReader.BaseStream.Position += 4;
+                }
+                return;
+            }
+
+            protected virtual void ApplyArmature()
+            {
+                if ((m_uVertexStart == 0 || m_uVertexCount == 0) ||
+                    (m_uBoneStart == 0 || m_uBoneCount == 0)) return;
+
+                for (UInt16 b = 0; b < m_uBoneCount; b++)
+                {
+                    if ((m_axBones[b].vFirst != 0xFFFF) && (m_axBones[b].vLast != 0xFFFF))
+                    {
+                        for (UInt16 v = m_axBones[b].vFirst; v <= m_axBones[b].vLast; v++)
+                        {
+                            m_axPositions[v].worldPos += m_axBones[b].worldPos;
+                            m_axPositions[v].boneID = b;
+                        }
+                    }
+                }
+                return;
+            }
+
+            protected virtual void ReadPolygon(BinaryReader xReader, int p)
+            {
+                UInt32 uPolygonPosition = (UInt32)xReader.BaseStream.Position;
+
+                m_axPolygons[p].v1 = m_axVertices[xReader.ReadUInt16()];
+                m_axPolygons[p].v2 = m_axVertices[xReader.ReadUInt16()];
+                m_axPolygons[p].v3 = m_axVertices[xReader.ReadUInt16()];
+
+                m_axPolygons[p].material = new ExMaterial();
+                m_axPolygons[p].material.visible = true;
+                m_axPolygons[p].material.textureUsed = (Boolean)(((int)xReader.ReadUInt16() & 0x0200) != 0);
+
+                if (m_axPolygons[p].material.textureUsed)
+                {
+                    // WIP
+                    UInt32 uMaterialPosition = m_uDataStart + xReader.ReadUInt32();
+                    if ((((uMaterialPosition - m_uMaterialStart) % 0x10) != 0) &&
+                         ((uMaterialPosition - m_uMaterialStart) % 0x18) == 0)
+                    {
+                        m_ePlatform = Platform.Dreamcast;
+                    }
+
+                    xReader.BaseStream.Position = uMaterialPosition;
+                    ReadMaterial(xReader, p);
+
+                    if (m_ePlatform == Platform.Dreamcast)
+                    {
+                        xReader.BaseStream.Position += 0x06;
                     }
                     else
                     {
-                        materialCount++;
+                        xReader.BaseStream.Position += 0x02;
+                    }
+
+                    m_axPolygons[p].material.colour = xReader.ReadUInt32();
+                    m_axPolygons[p].material.colour |= 0xFF000000;
+
+                }
+                else
+                {
+                    m_axPolygons[p].material.colour = xReader.ReadUInt32() | 0xFF000000;
+                }
+
+                Utility.FlipRedAndBlue(ref m_axPolygons[p].material.colour);
+
+                xReader.BaseStream.Position = uPolygonPosition + 0x0C;
+            }
+
+            protected override void ReadPolygons(BinaryReader xReader)
+            {
+                if (m_uPolygonStart == 0 || m_uPolygonCount == 0)
+                {
+                    return;
+                }
+
+                xReader.BaseStream.Position = m_uPolygonStart;
+
+                ExMaterialList xMaterialsList = null;
+
+                for (UInt16 p = 0; p < m_uPolygonCount; p++)
+                {
+                    ReadPolygon(xReader, p);
+
+                    if (xMaterialsList == null)
+                    {
+                        xMaterialsList = new ExMaterialList(m_axPolygons[p].material);
+                        m_xMaterialsList.Add(m_axPolygons[p].material);
+                    }
+                    else
+                    {
+                        ExMaterial newMaterial = xMaterialsList.AddToList(m_axPolygons[p].material);
+                        if (m_axPolygons[p].material != newMaterial)
+                        {
+                            m_axPolygons[p].material = newMaterial;
+                        }
+                        else
+                        {
+                            m_xMaterialsList.Add(m_axPolygons[p].material);
+                        }
+                    }
+                }
+
+                m_uMaterialCount = (UInt32)m_xMaterialsList.Count;
+
+                for (UInt32 t = 0; t < m_uTreeCount; t++)
+                {
+                    m_axTrees[t] = new ExTree();
+                    m_axTrees[t].m_xMesh = new ExMesh();
+                    m_axTrees[t].m_xMesh.m_uIndexCount = m_uIndexCount;
+                    m_axTrees[t].m_xMesh.m_uPolygonCount = m_uPolygonCount;
+                    m_axTrees[t].m_xMesh.m_axPolygons = m_axPolygons;
+                    m_axTrees[t].m_xMesh.m_axVertices = m_axVertices;
+
+                    // Make the vertices unique - Because I do the same thing in GenerateOutput
+                    m_axTrees[t].m_xMesh.m_axVertices = new ExVertex[m_uIndexCount];
+                    for (UInt16 poly = 0; poly < m_uPolygonCount; poly++)
+                    {
+                        m_axTrees[t].m_xMesh.m_axVertices[(3 * poly) + 0] = m_axPolygons[poly].v1;
+                        m_axTrees[t].m_xMesh.m_axVertices[(3 * poly) + 1] = m_axPolygons[poly].v2;
+                        m_axTrees[t].m_xMesh.m_axVertices[(3 * poly) + 2] = m_axPolygons[poly].v3;
                     }
                 }
             }
         }
 
-        private void ReadTextureData(BinaryReader reader, ref ExPolygon polygon)
+        protected class SR1UnitModel : SR1Model
         {
-            //(importFile.vertices[v].v) / 255f) + (0.5f / 255)
+            protected UInt32 m_uBspTreeCount;
+            protected UInt32 m_uBspTreeStart;
+            protected Realm m_eRealm;
+            protected UInt32 m_uSpectralVertexStart;
+            protected UInt32 m_uSpectralColourStart;
 
-            switch (_ModelType)
+            protected SR1UnitModel(BinaryReader xReader, UInt32 uDataStart, UInt32 uModelData, String strModelName, Platform ePlatform, Realm eRealm)
+                : base (xReader, uDataStart, uModelData, strModelName, ePlatform)
             {
-                case SR1ModelType.SoulReaverPlaystation:
-                    // Playstation textures
-                    polygon.v1.rawU = reader.ReadByte();
-                    polygon.v1.rawV = reader.ReadByte();
-                    //polygon.v1.u = ((float)(polygon.v1.rawU) / 255f) + (0.5f / 255f);
-                    //polygon.v1.v = ((float)(polygon.v1.rawV) / 255f) + (0.5f / 255f);
-                    polygon.v1.u = ((float)(polygon.v1.rawU) / 255.0f);
-                    polygon.v1.v = ((float)(polygon.v1.rawV) / 255.0f);
-                    ushort paletteVal = reader.ReadUInt16();
-                    ushort rowVal = (ushort)((ushort)(paletteVal << 2) >> 8);
-                    ushort colVal = (ushort)((ushort)(paletteVal << 11) >> 11);
-                    polygon.paletteColumn = colVal;
-                    polygon.paletteRow = rowVal;
-                    polygon.v2.rawU = reader.ReadByte();
-                    polygon.v2.rawV = reader.ReadByte();
-                    //polygon.v2.u = ((float)(polygon.v2.rawU) / 255f) + (0.5f / 255f);
-                    //polygon.v2.v = ((float)(polygon.v2.rawV) / 255f) + (0.5f / 255f);
-                    polygon.v2.u = ((float)(polygon.v2.rawU) / 255.0f);
-                    polygon.v2.v = ((float)(polygon.v2.rawV) / 255.0f);
-                    //polygon.material.textureID = (UInt16)((reader.ReadUInt16() & 0x07FF) - 8);
-                    polygon.material.textureID = (UInt16)(((reader.ReadUInt16() & 0x07FF) - 8) % 8);
-                    polygon.v3.rawU = reader.ReadByte();
-                    polygon.v3.rawV = reader.ReadByte();
-                    //polygon.v3.u = ((float)(polygon.v3.rawU) / 255f) + (0.5f / 255f);
-                    //polygon.v3.v = ((float)(polygon.v3.rawV) / 255f) + (0.5f / 255f);
-                    polygon.v3.u = ((float)(polygon.v3.rawU) / 255.0f);
-                    polygon.v3.v = ((float)(polygon.v3.rawV) / 255.0f);
-                    break;
-                case SR1ModelType.SoulReaverPC:
-                    // PC textures
-                    polygon.v1.rawU = reader.ReadByte();
-                    polygon.v1.rawV = reader.ReadByte();
-                    polygon.v1.u = ((float)(polygon.v1.rawU) / 255f) + (0.5f / 255f);
-                    polygon.v1.v = ((float)(polygon.v1.rawV) / 255f) + (0.5f / 255f);
-                    polygon.material.textureID = (UInt16)(reader.ReadUInt16() & 0x07FF);
-                    polygon.v2.rawU = reader.ReadByte();
-                    polygon.v2.rawV = reader.ReadByte();
-                    polygon.v2.u = ((float)(polygon.v2.rawU) / 255f) + (0.5f / 255f);
-                    polygon.v2.v = ((float)(polygon.v2.rawV) / 255f) + (0.5f / 255f);
-                    reader.BaseStream.Position += 2;
-                    polygon.v3.rawU = reader.ReadByte();
-                    polygon.v3.rawV = reader.ReadByte();
-                    polygon.v3.u = ((float)(polygon.v3.rawU) / 255f) + (0.5f / 255f);
-                    polygon.v3.v = ((float)(polygon.v3.rawV) / 255f) + (0.5f / 255f);
-                    break;
-                case SR1ModelType.SoulReaverDreamcast:
-                    // DC textures
-                    ushort int1 = reader.ReadUInt16();
-                    ushort int2 = reader.ReadUInt16();
-                    ushort int3 = reader.ReadUInt16();
-                    ushort int4 = reader.ReadUInt16();
-                    ushort int5 = reader.ReadUInt16();
-                    ushort int6 = reader.ReadUInt16();
-                    polygon.v1.rawU = int2;
-                    polygon.v1.rawV = int1;
-                    polygon.v2.rawU = int4;
-                    polygon.v2.rawV = int3;
-                    polygon.v3.rawU = int6;
-                    //polygon.v4.rawV = int5;
-                    polygon.v1.u = BizarreFloatToNormalFloat(int2);
-                    polygon.v1.v = BizarreFloatToNormalFloat(int1);
-                    polygon.v2.u = BizarreFloatToNormalFloat(int4);
-                    polygon.v2.v = BizarreFloatToNormalFloat(int3);
-                    polygon.v3.u = BizarreFloatToNormalFloat(int6);
-                    polygon.v3.v = BizarreFloatToNormalFloat(int5);
-                    polygon.material.textureID = (UInt16)((reader.ReadUInt16() & 0x07FF) - 1);
-                    break;
+                m_eRealm                    = eRealm;
+                xReader.BaseStream.Position = m_uModelData + 0x10;
+                m_uVertexCount              = xReader.ReadUInt32();
+                m_uPolygonCount             = xReader.ReadUInt32();
+                xReader.BaseStream.Position += 0x04;
+                m_uVertexStart              = m_uDataStart + xReader.ReadUInt32();
+                m_uPolygonStart             = m_uDataStart + xReader.ReadUInt32();
+                xReader.BaseStream.Position += 0x10;
+                m_uMaterialStart            = m_uDataStart + xReader.ReadUInt32();
+                m_uMaterialCount            = 0;
+                xReader.BaseStream.Position += 0x04;
+                m_uSpectralVertexStart      = m_uDataStart + xReader.ReadUInt32();
+                m_uSpectralColourStart      = m_uDataStart + xReader.ReadUInt32();
+                m_uBspTreeCount             = xReader.ReadUInt32();
+                m_uBspTreeStart             = m_uDataStart + xReader.ReadUInt32();
+                m_uTreeCount                = m_uBspTreeCount;
+
+                m_axTrees = new ExTree[m_uTreeCount];
             }
 
-            return;
-        }
-
-
-        protected float BizarreFloatToNormalFloat(ushort bizarreFloat)
-        {
-            // converts the 16-bit floating point values used in the DC version of Soul Reaver to normal 32-bit floats
-            ushort exponent;
-            int unbiasedExponent;
-            ushort significand;
-            //ushort signCheck = bizarreFloat;
-            //signCheck = signCheck >> 15;
-
-            exponent = bizarreFloat;
-            exponent = (ushort)(exponent << 1);
-            exponent = (ushort)(exponent >> 8);
-            unbiasedExponent = exponent - 127;
-            significand = bizarreFloat;
-            significand = (ushort)(significand << 9);
-            significand = (ushort)(significand >> 9);
-            float fraction = 1f;
-            for (int i = 0; i < 7; i++)
+            public static SR1UnitModel Load(BinaryReader xReader, UInt32 uDataStart, UInt32 uModelData, String strModelName, Platform ePlatform, Realm eRealm)
             {
-                byte current = (byte)significand;
-                current = (byte)(current << (i + 1));
-                current = (byte)(current >> 7);
-                fraction += (float)((float)current * Math.Pow(2, 0 - (1 + i)));
+                SR1UnitModel xModel = new SR1UnitModel(xReader, uDataStart, uModelData, strModelName, ePlatform, eRealm);
+                xModel.ReadData(xReader);
+                return xModel;
             }
-            float calcValue = (float)(fraction * Math.Pow(2, (double)unbiasedExponent));
-            //if (!positive)
-            //{
-            //    calcValue *= -1f;
-            //}
-            return calcValue;
-        }
 
-        private void ReadBSPTree(BinaryReader reader)
-        {
-            Boolean drawTester;
-            UInt16 bspID = 0;
-            ExBSPTree currentTree;
-            ExBSPTree[] bspTrees = new ExBSPTree[bspTreeCount];
-            ExBSPTreeStack stack = new ExBSPTreeStack();
-            for (UInt16 b = 0; b < bspTreeCount; b++)
+            protected override void ReadVertex(BinaryReader xReader, int v)
             {
-                reader.BaseStream.Position = bspTreeStart + (b * 0x24);
-                bspTrees[b] = new ExBSPTree();
-                bspTrees[b].dataPos = dataStart + reader.ReadUInt32();
+                base.ReadVertex(xReader, v);
 
-                reader.BaseStream.Position += 0x0E;
-                drawTester = ((reader.ReadInt16() & 1) != 1);
+                m_axVertices[v].colourID = v;
 
-                reader.BaseStream.Position += 0x06;
-                bspID = reader.ReadUInt16();
-                stack.Push(bspTrees[b]);
-                currentTree = stack.Top;
+                xReader.BaseStream.Position += 2;
+                m_auColours[v] = xReader.ReadUInt32() | 0xFF000000;
 
-                while (currentTree != null)
+                if (m_ePlatform != Platform.Dreamcast)
                 {
-                    reader.BaseStream.Position = currentTree.dataPos + 0x0E;
-                    currentTree.isLeaf = ((reader.ReadByte() & 0x02) == 0x02);
-                    if (currentTree.isLeaf)
+                    Utility.FlipRedAndBlue(ref m_auColours[v]);
+                }
+            }
+
+            protected override void ReadVertices(BinaryReader xReader)
+            {
+                base.ReadVertices(xReader);
+
+                ReadSpectralData(xReader);
+            }
+
+            protected virtual void ReadSpectralData(BinaryReader xReader)
+            {
+                if (m_eRealm == Realm.Spectral)
+                {
+                    // Spectral Colours
+                    xReader.BaseStream.Position = m_uSpectralColourStart;
+                    for (int v = 0; v < m_uVertexCount; v++)
                     {
-                        // Handle Leaf here
-                        reader.BaseStream.Position = currentTree.dataPos + 0x08;
-                        UInt32 polygonPos = dataStart + reader.ReadUInt32();
-                        UInt32 polygonID = (polygonPos - polygonStart) / 0x0C;
-                        UInt16 polyCount = reader.ReadUInt16();
-                        for (UInt16 p = 0; p < polyCount; p++)
+                        UInt32 uShiftColour = xReader.ReadUInt16();
+                        UInt32 uAlpha = m_auColours[v] & 0xFF000000;
+                        UInt32 uRed = ((uShiftColour >> 0) & 0x1F) << 0x13;
+                        UInt32 uGreen = ((uShiftColour >> 5) & 0x1F) << 0x0B;
+                        UInt32 uBlue = ((uShiftColour >> 10) & 0x1F) << 0x03;
+                        m_auColours[v] = uAlpha | uRed | uGreen | uBlue;
+                    }
+
+                    // Spectral Verticices
+                    xReader.BaseStream.Position = m_uSpectralVertexStart + 0x06;
+                    int sVertex = xReader.ReadInt16();
+                    xReader.BaseStream.Position = m_uSpectralVertexStart;
+                    while (sVertex != 0xFFFF)
+                    {
+                        ExShiftVertex xShiftVertex;
+                        xShiftVertex.basePos.x = (float)xReader.ReadInt16();
+                        xShiftVertex.basePos.y = (float)xReader.ReadInt16();
+                        xShiftVertex.basePos.z = (float)xReader.ReadInt16();
+                        sVertex = xReader.ReadUInt16();
+
+                        if (sVertex == 0xFFFF)
                         {
-                            // 0 = dome, 2 = firelamps, 3 = barriers,
-                            // 4 = centre floor, 5 = outer floor,
-                            // 6 = collision around coffins,
-                            // 7 = corridor, 8 = coffins and small dome,
-                            // 9 = stairs, 
-                            /*if (bspID == 0 || bspID == 2 || bspID == 5 ||
-                                bspID == 7 || bspID == 8 || bspID == 9 ||
-                                bspID == 4)*/
-                            if (drawTester)
-                            polygons[polygonID + p].isVisible = true;
+                            break;
                         }
 
-                        // Finished with right child, now handle left.
-                        currentTree = stack.Pop();
-                        continue;
-                    }
-                    reader.BaseStream.Position = currentTree.dataPos + 0x14;
-                    UInt32 leftPos = reader.ReadUInt32();
-                    if (leftPos != 0)
-                    {
-                        currentTree.leftChild = new ExBSPTree();
-                        currentTree.leftChild.dataPos = dataStart + leftPos;
-                        stack.Push(currentTree.leftChild);
-                    }
-                    UInt32 rightPos = reader.ReadUInt32();
-                    if (rightPos != 0)
-                    {
-                        currentTree.rightChild = new ExBSPTree();
-                        currentTree.rightChild.dataPos = dataStart + rightPos;
-                        currentTree = currentTree.rightChild;
+                        xShiftVertex.offset.x = (float)xReader.ReadInt16();
+                        xShiftVertex.offset.y = (float)xReader.ReadInt16();
+                        xShiftVertex.offset.z = (float)xReader.ReadInt16();
+                        m_axPositions[sVertex].localPos = xShiftVertex.offset + xShiftVertex.basePos;
+                        m_axPositions[sVertex].worldPos = m_axPositions[sVertex].localPos;
                     }
                 }
             }
-            return;
+
+            protected virtual void ReadPolygon(BinaryReader xReader, int p)
+            {
+                UInt32 uPolygonPosition = (UInt32)xReader.BaseStream.Position;
+
+                m_axPolygons[p].v1 = m_axVertices[xReader.ReadUInt16()];
+                m_axPolygons[p].v2 = m_axVertices[xReader.ReadUInt16()];
+                m_axPolygons[p].v3 = m_axVertices[xReader.ReadUInt16()];
+                m_axPolygons[p].material = new ExMaterial();
+
+                m_axPolygons[p].material.textureUsed |= (Boolean)(((int)xReader.ReadUInt16() & 0x0004) == 0);
+                xReader.BaseStream.Position += 0x02;
+                UInt16 uMaterialOffset = xReader.ReadUInt16();
+                m_axPolygons[p].material.textureUsed &= (Boolean)(uMaterialOffset != 0xFFFF);
+
+                if (m_axPolygons[p].material.textureUsed)
+                {
+                    // WIP
+                    UInt32 uMaterialPosition = uMaterialOffset + m_uMaterialStart;
+                    if ((((uMaterialPosition - m_uMaterialStart) % 0x0C) != 0) &&
+                         ((uMaterialPosition - m_uMaterialStart) % 0x14) == 0)
+                    {
+                        m_ePlatform = Platform.Dreamcast;
+                    }
+
+                    xReader.BaseStream.Position = uMaterialPosition;
+                    ReadMaterial(xReader, p);
+                }
+                else
+                {
+                    m_axPolygons[p].material.textureUsed = false;
+                    m_axPolygons[p].material.colour = 0xFFFFFFFF;
+                }
+
+                Utility.FlipRedAndBlue(ref m_axPolygons[p].material.colour);
+
+                xReader.BaseStream.Position = uPolygonPosition + 0x0C;
+            }
+
+            protected override void ReadPolygons(BinaryReader xReader)
+            {
+                if (m_uPolygonStart == 0 || m_uPolygonCount == 0)
+                {
+                    return;
+                }
+
+                xReader.BaseStream.Position = m_uPolygonStart;
+
+                for (UInt16 p = 0; p < m_uPolygonCount; p++)
+                {
+                    ReadPolygon(xReader, p);
+                }
+
+                MemoryStream xPolyStream = new MemoryStream((Int32)m_uVertexCount * 3);
+                BinaryWriter xPolyWriter = new BinaryWriter(xPolyStream);
+                BinaryReader xPolyReader = new BinaryReader(xPolyStream);
+
+                List<ExMesh> xMeshes = new List<ExMesh>();
+                List<Int64> xMeshPositions = new List<Int64>();
+
+                for (UInt32 t = 0; t < m_uBspTreeCount; t++)
+                {
+                    xReader.BaseStream.Position = m_uBspTreeStart + (t * 0x24);
+                    UInt32 uDataPos = m_uDataStart + xReader.ReadUInt32();
+                    xReader.BaseStream.Position += 0x0C;
+                    bool drawTester = ((xReader.ReadInt32() & 1) != 1);
+                    xReader.BaseStream.Position += 0x06;
+                    UInt16 usBspID = xReader.ReadUInt16();
+
+                    m_axTrees[t] = ReadBSPTree(xReader, xPolyWriter, uDataPos, m_axTrees[t], xMeshes, xMeshPositions, 0);
+                }
+
+                ExMaterialList xMaterialsList = null;
+
+                for (UInt16 p = 0; p < m_uPolygonCount; p++)
+                {
+                    if (xMaterialsList == null)
+                    {
+                        xMaterialsList = new ExMaterialList(m_axPolygons[p].material);
+                        m_xMaterialsList.Add(m_axPolygons[p].material);
+                    }
+                    else
+                    {
+                        ExMaterial newMaterial = xMaterialsList.AddToList(m_axPolygons[p].material);
+                        if (m_axPolygons[p].material != newMaterial)
+                        {
+                            m_axPolygons[p].material = newMaterial;
+                        }
+                        else
+                        {
+                            m_xMaterialsList.Add(m_axPolygons[p].material);
+                        }
+                    }
+                }
+
+                m_uMaterialCount = (UInt32)m_xMaterialsList.Count;
+
+                xPolyReader.BaseStream.Position = 0;
+                for (int m = 0; m < xMeshes.Count; m++)
+                {
+                    ExMesh xCurrentMesh = xMeshes[m];
+                    Int64 iStartPosition = xPolyReader.BaseStream.Position;
+                    Int64 iEndPosition = xMeshPositions[m];
+                    Int64 iRange = iEndPosition - iStartPosition;
+                    UInt32 uIndexCount = (UInt32)iRange / 4;
+
+                    FinaliseMesh(xPolyReader, xCurrentMesh, uIndexCount);
+                }
+            }
+
+            protected virtual ExTree ReadBSPTree(BinaryReader xReader, BinaryWriter xPolyWriter, UInt32 uDataPos, ExTree xParentTree, List<ExMesh> xMeshes, List<Int64> xMeshPositions, UInt32 uDepth)
+            {
+                if (uDataPos == 0)
+                {
+                    return null;
+                }
+
+                xReader.BaseStream.Position = uDataPos + 0x0E;
+                bool isLeaf = ((xReader.ReadByte() & 0x02) == 0x02);
+                Int32 iSubTreeCount = 2;
+
+                ExTree xTree = null;
+                ExMesh xMesh = null;
+
+                UInt32 uMaxDepth = 0;
+
+                if (uDepth <= uMaxDepth)
+                {
+                    xTree = new ExTree();
+                    xMesh = new ExMesh();
+                    xTree.m_xMesh = xMesh;
+
+                    if (xParentTree != null)
+                    {
+                        xParentTree.Push(xTree);
+                    }
+                }
+                else
+                {
+                    xTree = xParentTree;
+                    xMesh = xParentTree.m_xMesh;
+                }
+
+                if (isLeaf)
+                {
+                    xTree.isLeaf = true;
+
+                    xReader.BaseStream.Position = uDataPos + 0x08;
+                    ReadBSPLeaf(xReader, xPolyWriter, xMesh);
+                }
+                else
+                {
+                    xReader.BaseStream.Position = uDataPos + 0x14;
+
+                    UInt32[] auSubTreePositions = new UInt32[2];
+                    for (Int32 s = 0; s < iSubTreeCount; s++)
+                    {
+                        auSubTreePositions[s] = xReader.ReadUInt32();
+                    }
+
+                    for (Int32 s = iSubTreeCount - 1; s >= 0; s--)
+                    {
+                        ReadBSPTree(xReader, xPolyWriter, auSubTreePositions[s], xTree, xMeshes, xMeshPositions, uDepth + 1);
+                    }
+                }
+
+                if (uDepth <= uMaxDepth)
+                {
+                    if (xMesh != null && xMesh.m_uIndexCount > 0)
+                    {
+                        xMeshes.Add(xMesh);
+                        xMeshPositions.Add(xPolyWriter.BaseStream.Position);
+                    }
+                }
+
+                return xTree;
+            }
+
+            protected virtual void ReadBSPLeaf(BinaryReader xReader, BinaryWriter xPolyWriter, ExMesh xMesh)
+            {
+                UInt32 polygonPos = m_uDataStart + xReader.ReadUInt32();
+                UInt32 polygonID = (polygonPos - m_uPolygonStart) / 0x0C;
+                UInt16 polyCount = xReader.ReadUInt16();
+                for (UInt16 p = 0; p < polyCount; p++)
+                {
+                    m_axPolygons[polygonID + p].material.visible = true;
+
+                    xPolyWriter.Write(polygonID + p);
+
+                    if (xMesh != null)
+                    {
+                        xMesh.m_uIndexCount += 3;
+                    }
+                }
+            }
+
+            protected virtual void FinaliseMesh(BinaryReader xPolyReader, ExMesh xMesh, UInt32 uIndexCount)
+            {
+                //xMesh.m_uIndexCount = uIndexCount;
+                xMesh.m_uPolygonCount = xMesh.m_uIndexCount / 3;
+                xMesh.m_axPolygons = new ExPolygon[xMesh.m_uPolygonCount];
+                for (UInt32 p = 0; p < xMesh.m_uPolygonCount; p++)
+                {
+                    UInt32 polygonID = xPolyReader.ReadUInt32();
+                    xMesh.m_axPolygons[p] = m_axPolygons[polygonID];
+                }
+
+                // Make the vertices unique - Because I do the same thing in GenerateOutput
+                xMesh.m_axVertices = new ExVertex[xMesh.m_uIndexCount];
+                for (UInt16 poly = 0; poly < xMesh.m_uPolygonCount; poly++)
+                {
+                    xMesh.m_axVertices[(3 * poly) + 0] = xMesh.m_axPolygons[poly].v1;
+                    xMesh.m_axVertices[(3 * poly) + 1] = xMesh.m_axPolygons[poly].v2;
+                    xMesh.m_axVertices[(3 * poly) + 2] = xMesh.m_axPolygons[poly].v3;
+                }
+            }
         }
 
-        private void FlipRedAndBlue(ref UInt32 colour)
+        #endregion
+
+        public SR1File(String strFileName)
+            : base(strFileName)
         {
-            UInt32 tempColour = colour;
-            colour =
-                (tempColour & 0xFF000000) |
-                ((tempColour << 16) & 0x00FF0000) |
-                (tempColour & 0x0000FF00) |
-                ((tempColour >> 16) & 0x000000FF);
-            return;
+        }
+
+        protected override void ReadHeaderData(BinaryReader xReader)
+        {
+            m_uDataStart = 0;
+
+            // Could use unit version number instead of thing below.
+            // Check that's what SR2 does.
+            //xReader.BaseStream.Position = m_uDataStart + 0xF0;
+            //UInt32 unitVersionNumber = xReader.ReadUInt32();
+            //if (unitVersionNumber != 0x3C20413B)
+
+            // Moved to ResolvePointers due to not knowing how else to tell.
+            //xReader.BaseStream.Position = 0x00000000;
+            //if (xReader.ReadUInt32() == 0x00000000)
+            //{
+            //    m_eFileType = FileType.Unit;
+            //}
+            //else
+            //{
+            //    m_eFileType = FileType.Object;
+            //}
+        }
+
+        protected override void ReadObjectData(BinaryReader xReader)
+        {
+            // Object name
+            xReader.BaseStream.Position = m_uDataStart + 0x00000024;
+            xReader.BaseStream.Position = m_uDataStart + xReader.ReadUInt32();
+            String strModelName = new String(xReader.ReadChars(8));
+            m_strModelName = Utility.CleanName(strModelName);
+
+            // Texture type
+            xReader.BaseStream.Position = m_uDataStart + 0x44;
+            if (xReader.ReadUInt64() != 0xFFFFFFFFFFFFFFFF)
+            {
+                m_ePlatform = Platform.PSX;
+            }
+            else
+            {
+                m_ePlatform = Platform.PC;
+            }
+
+            // Model data
+            xReader.BaseStream.Position = m_uDataStart + 0x00000008;
+            m_usModelCount = xReader.ReadUInt16();
+            m_usAnimCount = xReader.ReadUInt16();
+            m_uModelStart = m_uDataStart + xReader.ReadUInt32();
+            m_uAnimStart = m_uDataStart + xReader.ReadUInt32();
+
+            m_axModels = new SR1Model[m_usModelCount];
+            Platform ePlatform = m_ePlatform;
+            for (UInt16 m = 0; m < m_usModelCount; m++)
+            {
+                m_axModels[m] = SR1ObjectModel.Load(xReader, m_uDataStart, m_uModelStart, m_strModelName, m_ePlatform, m);
+                if (m_axModels[m].Platform == Platform.Dreamcast)
+                {
+                    ePlatform = m_axModels[m].Platform;
+                }
+            }
+            m_ePlatform = ePlatform;
+        }
+
+        protected override void ReadUnitData(BinaryReader xReader)
+        {
+            // Connected unit names
+            xReader.BaseStream.Position = m_uDataStart;
+            UInt32 m_uConnectionData = m_uDataStart + xReader.ReadUInt32();
+            xReader.BaseStream.Position = m_uConnectionData + 0x30;
+            xReader.BaseStream.Position = m_uDataStart + xReader.ReadUInt32();
+            m_uConnectedUnitCount = xReader.ReadUInt32();
+            m_astrConnectedUnit = new String[m_uConnectedUnitCount];
+            for (int i = 0; i < m_uConnectedUnitCount; i++)
+            {
+                String strUnitName = new String(xReader.ReadChars(12));
+                m_astrConnectedUnit[i] = Utility.CleanName(strUnitName);
+                xReader.BaseStream.Position += 0x50;
+            }
+
+            // Instances
+            xReader.BaseStream.Position = m_uDataStart + 0x78;
+            m_uInstanceCount = xReader.ReadUInt32();
+            m_uInstanceStart = m_uDataStart + xReader.ReadUInt32();
+            m_astrInstances = new String[m_uInstanceCount];
+            for (int i = 0; i < m_uInstanceCount; i++)
+            {
+                xReader.BaseStream.Position = m_uInstanceStart + 0x4C * i;
+                String strInstanceName = new String(xReader.ReadChars(8));
+                m_astrInstances[i] = Utility.CleanName(strInstanceName);
+            }
+
+            // Instance types
+            xReader.BaseStream.Position = m_uDataStart + 0x8C;
+            m_uInstanceTypesStart = m_uDataStart + xReader.ReadUInt32();
+            xReader.BaseStream.Position = m_uInstanceTypesStart;
+            List<String> xInstanceList = new List<String>();
+            while (xReader.ReadByte() != 0xFF)
+            {
+                xReader.BaseStream.Position--;
+                String strInstanceTypeName = new String(xReader.ReadChars(8));
+                xInstanceList.Add(Utility.CleanName(strInstanceTypeName));
+                xReader.BaseStream.Position += 0x08;
+            }
+            m_axInstanceTypeNames = xInstanceList.ToArray();
+
+            // Unit name
+            xReader.BaseStream.Position = m_uDataStart + 0x98;
+            xReader.BaseStream.Position = m_uDataStart + xReader.ReadUInt32();
+            String strModelName = new String(xReader.ReadChars(8));
+            m_strModelName = Utility.CleanName(strModelName);
+
+            // Texture type
+            xReader.BaseStream.Position = m_uDataStart + 0x9C;
+            if (xReader.ReadUInt64() != 0xFFFFFFFFFFFFFFFF)
+            {
+                m_ePlatform = Platform.PSX;
+            }
+            else
+            {
+                m_ePlatform = Platform.PC;
+            }
+
+            // Connected unit list. (unreferenced?)
+            //xReader.BaseStream.Position = m_uDataStart + 0xC0;
+            //m_uConnectedUnitsStart = m_uDataStart + xReader.ReadUInt32() + 0x08;
+            //xReader.BaseStream.Position = m_uConnectedUnitsStart;
+            //xReader.BaseStream.Position += 0x18;
+            //String strUnitName0 = new String(xReader.ReadChars(16));
+            //strUnitName0 = strUnitName0.Substring(0, strUnitName0.IndexOf(','));
+            //xReader.BaseStream.Position += 0x18;
+            //String strUnitName1 = new String(xReader.ReadChars(16));
+            //strUnitName1 = strUnitName1.Substring(0, strUnitName1.IndexOf(','));
+            //xReader.BaseStream.Position += 0x18;
+            //String strUnitName2 = new String(xReader.ReadChars(16));
+            //strUnitName2 = strUnitName2.Substring(0, strUnitName2.IndexOf(','));
+
+            // Version number
+            xReader.BaseStream.Position = m_uDataStart + 0xF0;
+            UInt32 unitVersionNumber = xReader.ReadUInt32();
+            if (unitVersionNumber != 0x3C20413B)
+            {
+                // Beta gets here...
+                // throw new Exception("Wrong version number for level x");
+            }
+
+            // Model data
+            xReader.BaseStream.Position = m_uDataStart;
+            m_usModelCount = 2;
+            m_uModelStart = m_uDataStart;
+            m_axModels = new SR1Model[m_usModelCount];
+            xReader.BaseStream.Position = m_uModelStart;
+            UInt32 m_uModelData = m_uDataStart + xReader.ReadUInt32();
+
+            // Material data
+            m_axModels[0] = SR1UnitModel.Load(xReader, m_uDataStart, m_uModelData, m_strModelName, m_ePlatform, Realm.Material);
+
+            // Spectral data
+            m_axModels[1] = SR1UnitModel.Load(xReader, m_uDataStart, m_uModelData, m_strModelName, m_ePlatform, Realm.Spectral);
+
+            if (m_axModels[0].Platform == Platform.Dreamcast ||
+                m_axModels[1].Platform == Platform.Dreamcast)
+            {
+                m_ePlatform = Platform.Dreamcast;
+            }
+        }
+
+        protected override void ResolvePointers(BinaryReader xReader, BinaryWriter xWriter)
+        {
+            UInt32 uDataStart = ((xReader.ReadUInt32() >> 9) << 11) + 0x00000800;
+            if (xReader.ReadUInt32() == 0x00000000)
+            {
+                m_eFileType = FileType.Unit;
+            }
+            else
+            {
+                m_eFileType = FileType.Object;
+            }
+
+            xReader.BaseStream.Position = uDataStart;
+            xWriter.BaseStream.Position = 0;
+
+            xReader.BaseStream.CopyTo(xWriter.BaseStream);
         }
     }
 }
