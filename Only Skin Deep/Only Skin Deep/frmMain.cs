@@ -679,35 +679,11 @@ namespace Only_Skin_Deep
         {
             if (_File != null && _File.FileType == CDT.TextureFileType.SoulReaverPlaystation)
             {
-                CDT_SRPSPolygonTextureData[] polygonData = null;
-                List<CDO.SR1File> objectFiles = new List<CDO.SR1File>();
-                #region Main Object
+                CDO.SR1File objectFile = null;
                 try
                 {
-                    CDO.SR1File objectFile = new CDO.SR1File(objectFileName);
-                    objectFiles.Add(objectFile);
+                    objectFile = new CDO.SR1File(objectFileName);
                     ExportResult.AddToList(exportResults, ExportResultType.Success, FileType.Object, objectFileName);
-
-                    #region Connected Units
-                    for (int u = 0; u < objectFile.ConectedUnitCount; u++)
-                    {
-                        String connectedObjectFileName = Path.GetDirectoryName(objectFileName) + @"\" + objectFile.ConnectedUnit[u] + ".pcm";
-                        try
-                        {
-                            CDO.SR1File connectedObjectFile = new CDO.SR1File(connectedObjectFileName);
-                            objectFiles.Add(connectedObjectFile);
-                            ExportResult.AddToList(exportResults, ExportResultType.Success, FileType.Object, connectedObjectFileName);
-                        }
-                        catch (FileNotFoundException)
-                        {
-                            ExportResult.AddToList(exportResults, ExportResultType.Missing, FileType.Object, connectedObjectFileName);
-                        }
-                        catch
-                        {
-                            ExportResult.AddToList(exportResults, ExportResultType.Failure, FileType.Object, connectedObjectFileName);
-                        }
-                    }
-                    #endregion
                 }
                 catch (FileNotFoundException)
                 {
@@ -717,41 +693,33 @@ namespace Only_Skin_Deep
                 {
                     ExportResult.AddToList(exportResults, ExportResultType.Failure, FileType.Object, objectFileName);
                 }
-                #endregion
 
                 try
                 {
                     int numPolygons = 0;
-                    foreach (CDO.SR1File srFile in objectFiles)
+                    foreach (CDM.SRModel model in objectFile.Models)
                     {
-                        foreach (CDM.SRModel model in srFile.Models)
-                        {
-                            numPolygons += (int)model.PolygonCount;
-                        }
+                        numPolygons += (int)model.PolygonCount;
                     }
 
-                    polygonData = new CDT_SRPSPolygonTextureData[numPolygons];
-
                     int currentPolygon = 0;
-                    foreach (CDO.SR1File srFile in objectFiles)
+                    CDT_SRPSPolygonTextureData[] polygonData = new CDT_SRPSPolygonTextureData[numPolygons];
+                    foreach (CDM.SRModel model in objectFile.Models)
                     {
-                        foreach (CDM.SRModel model in srFile.Models)
+                        foreach (CDC.Polygon poly in model.Polygons)
                         {
-                            foreach (CDC.Polygon poly in model.Polygons)
-                            {
-                                polygonData[currentPolygon].paletteColumn = poly.paletteColumn;
-                                polygonData[currentPolygon].paletteRow = poly.paletteRow;
-                                polygonData[currentPolygon].u = new int[3];
-                                polygonData[currentPolygon].v = new int[3];
-                                polygonData[currentPolygon].u[0] = (int)(model.UVs[poly.v1.UVID].u * 255);
-                                polygonData[currentPolygon].u[1] = (int)(model.UVs[poly.v2.UVID].u * 255);
-                                polygonData[currentPolygon].u[2] = (int)(model.UVs[poly.v3.UVID].u * 255);
-                                polygonData[currentPolygon].v[0] = (int)(model.UVs[poly.v1.UVID].v * 255);
-                                polygonData[currentPolygon].v[1] = (int)(model.UVs[poly.v2.UVID].v * 255);
-                                polygonData[currentPolygon].v[2] = (int)(model.UVs[poly.v3.UVID].v * 255);
-                                polygonData[currentPolygon].textureID = poly.material.textureID;
-                                currentPolygon++;
-                            }
+                            polygonData[currentPolygon].paletteColumn = poly.paletteColumn;
+                            polygonData[currentPolygon].paletteRow = poly.paletteRow;
+                            polygonData[currentPolygon].u = new int[3];
+                            polygonData[currentPolygon].v = new int[3];
+                            polygonData[currentPolygon].u[0] = (int)(model.UVs[poly.v1.UVID].u * 255);
+                            polygonData[currentPolygon].u[1] = (int)(model.UVs[poly.v2.UVID].u * 255);
+                            polygonData[currentPolygon].u[2] = (int)(model.UVs[poly.v3.UVID].u * 255);
+                            polygonData[currentPolygon].v[0] = (int)(model.UVs[poly.v1.UVID].v * 255);
+                            polygonData[currentPolygon].v[1] = (int)(model.UVs[poly.v2.UVID].v * 255);
+                            polygonData[currentPolygon].v[2] = (int)(model.UVs[poly.v3.UVID].v * 255);
+                            polygonData[currentPolygon].textureID = poly.material.textureID;
+                            currentPolygon++;
                         }
                     }
 

@@ -76,13 +76,13 @@
     <Compile Include="VRMTextureFile.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AMF.ImageFormats\Soeminnminn.ImageFormats.csproj">
+      <Project>{770328d4-e5b9-445c-ae97-1ba33ba6d4dc}</Project>
+      <Name>Soeminnminn.ImageFormats</Name>
+    </ProjectReference>
     <ProjectReference Include="..\BenLincoln.Playstation2\BenLincoln.Playstation2.csproj">
       <Project>{ae366e9e-3b50-4145-bf74-db6be62fd7e0}</Project>
       <Name>BenLincoln.Playstation2</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Only Skin Deep\AMF.ImageFormats\Soeminnminn.ImageFormats.csproj">
-      <Project>{770328d4-e5b9-445c-ae97-1ba33ba6d4dc}</Project>
-      <Name>Soeminnminn.ImageFormats</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
