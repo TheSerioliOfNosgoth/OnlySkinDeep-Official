@@ -204,6 +204,11 @@ namespace BenLincoln.TheLostWorlds.CDTextures
         public abstract MemoryStream GetDataAsStream(int index);
         // implemented in subclasses to handle specific file types
 
+        public virtual void ImportFile(int index, string inPath)
+        {
+            throw new Exception("The method or operation is not implemented.");
+        }
+
         public virtual void ExportFile(int index, string outPath)
         {
             _ErrorOccurred = false;
@@ -240,10 +245,15 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                 ArrayList parmList = (ArrayList)parms;
                 ExportFile((int)parmList[0], (string)parmList[1]);
             }
-            catch (InvalidCastException ex)
+            catch (InvalidCastException)
             {
                 throw new InvalidCastException("Passed object must be an arraylist with the first element being an int and the second a string.");
             }
+        }
+
+        public virtual void ExportArchiveFile(string inPath)
+        {
+            throw new Exception("The method or operation is not implemented.");
         }
 
         public static TextureFileType GetFileType(string path)
@@ -255,21 +265,15 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                 case ".vrm":
                     // determine if PC / Playstation / etc
                     return VRMTextureFile.GetVRMType(path);
-                    break;
                 case ".big":
                     return TextureFileType.SoulReaverPC;
-                    break;
                 case ".vq":
                     return TextureFileType.SoulReaverDreamcast;
-                    break;
                 case ".crm":
                     return TextureFileType.SoulReaverPlaystation;
-                    break;
                 default:
                     return TextureFileType.Unknown;
-                    break;
             }
-            return TextureFileType.Unknown;
         }
     }
 }

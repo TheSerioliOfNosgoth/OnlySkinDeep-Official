@@ -28,10 +28,13 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using CDT = BenLincoln.TheLostWorlds.CDTextures;
 using BLS = BenLincoln.Shared;
 using BLUI = BenLincoln.UI;
-using AMEX = AMF.ModelEx;
+using CDO = CDC.Objects;
+using CDM = CDC.Objects.Models;
+using CDT = BenLincoln.TheLostWorlds.CDTextures;
+using CDT_SRPSTextureFile = BenLincoln.TheLostWorlds.CDTextures.SoulReaverPlaystationTextureFile;
+using CDT_SRPSPolygonTextureData = BenLincoln.TheLostWorlds.CDTextures.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData;
 
 namespace Only_Skin_Deep
 {
@@ -46,6 +49,7 @@ namespace Only_Skin_Deep
 
     public struct BatchExportParameters
     {
+        public string outputFolder;
         public Hashtable FileList;
         public bool ExportAllMipMaps;
     }
@@ -56,12 +60,83 @@ namespace Only_Skin_Deep
         protected frmAbout _AboutWindow;
         protected BLUI.ProgressWindow _ProgressWindow;
 
+        protected enum ExportResultType
+        {
+            Success,
+            Failure,
+            Invalid,
+            Missing
+        }
+
+        protected enum FileType
+        {
+            Texture,
+            Object
+        }
+
+        protected struct ExportResult
+        {
+            public ExportResultType ResultType;
+            public FileType FileType;
+            public String FileName;
+            public static void AddToList(List<ExportResult> list, ExportResultType resultType, FileType fileType, String fileName)
+            {
+                if (list == null)
+                {
+                    return;
+                }
+
+                ExportResult result = new ExportResult();
+                result.ResultType = resultType;
+                result.FileType = fileType;
+                result.FileName = fileName;
+                if (list != null)
+                {
+                    list.Add(result);
+                }
+            }
+            public String GetMessage()
+            {
+                String result = "";
+                String fileType = "";
+
+                switch (ResultType)
+                {
+                    case ExportResultType.Success:
+                        result = "Read ";
+                        break;
+                    case ExportResultType.Missing:
+                        result = "Missing ";
+                        break;
+                    case ExportResultType.Failure:
+                        result = "Bad ";
+                        break;
+                    default:
+                        result = "Unsupported ";
+                        break;
+                }
+
+                switch (FileType)
+                {
+                    case FileType.Object:
+                        fileType = "object file - ";
+                        break;
+                    default:
+                        fileType = "texture file - ";
+                        break;
+                }
+
+                return result + fileType + "\"" + FileName + "\"";
+            }
+        }
+
         public frmMain(string[] args)
         {
             InitializeComponent();
-            directXView.Initialize();
+            btnSave.Enabled = false;
             btnExportAll.Enabled = false;
             btnExportCurrent.Enabled = false;
+            btnImportCurrent.Enabled = false;
             exportAllToolStripMenuItem.Enabled = false;
             lvTextureList.SelectedIndexChanged += new EventHandler(lvTextureList_SelectedIndexChanged);
 
@@ -104,6 +179,11 @@ namespace Only_Skin_Deep
             OpenFile();
         }
 
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            SaveFile();
+        }
+
         private void batchConvertToolStripMenuItem_Click(object sender, EventArgs e)
         {
             BatchConvert();
@@ -127,6 +207,11 @@ namespace Only_Skin_Deep
         private void btnExportCurrent_Click(object sender, EventArgs e)
         {
             ExportCurrentThreaded();
+        }
+
+        private void btnImportCurrent_Click(object sender, EventArgs e)
+        {
+            ImportCurrent();
         }
 
         private void aboutOnlySkinDeepToolStripMenuItem_Click(object sender, EventArgs e)
@@ -157,17 +242,21 @@ namespace Only_Skin_Deep
                     rect.Height = VRMFile.TextureDefinitions[index].Height;
                 }
 
-                directXView.Width = rect.Width;
-                directXView.Height = rect.Height;
-                directXView.SetTexture(_File.GetTexture(directXView.GetDevice(), index), rect);
-            }
-            catch
-            {
-                //directXView.SetTexture(null, rect);
-            }
+                if (rect.Width <= 0 || rect.Height <= 0)
+                {
+                    throw new Exception();
+                }
 
-            //directXView.Invalidate();
-            directXView.Update();
+                try
+                {
+                    pictureBox.Image = _File.GetTextureAsBitmap(index);
+                }
+                catch (Exception)
+                {
+                    pictureBox.Image = null;
+                }
+            }
+            catch { }
         }
 
         #endregion
@@ -211,12 +300,6 @@ namespace Only_Skin_Deep
             parentForm.Location.X + ((parentForm.Width - childForm.Width) / 2),
             parentForm.Location.Y + ((parentForm.Height - childForm.Height) / 2)
             );
-        }
-
-        protected void NotifyNotSupported(string path)
-        {
-            MessageBox.Show("The file '" + path + "' does not appear to be encoded in a supported format.",
-                "Not Supported", MessageBoxButtons.OK, MessageBoxIcon.Stop);
         }
 
         #endregion
@@ -279,7 +362,7 @@ namespace Only_Skin_Deep
 
             Hashtable fileList = new Hashtable();
             fileList = GetBatchProcessFileList(fileList, inFolderBase, inFolderBase, outFolderBase, recurseInput, recurseOutput);
-
+            parms.outputFolder = outFolderBase;
             parms.FileList = fileList;
             parms.ExportAllMipMaps = false;
 
@@ -313,12 +396,13 @@ namespace Only_Skin_Deep
             {
                 parms = (BatchExportParameters)oParms;
             }
-            catch (InvalidCastException iEx)
+            catch (InvalidCastException)
             {
                 throw new InvalidCastException("Passed value must be an instance of BatchExportParameters.");
             }
+
             Hashtable fileList = parms.FileList;
-            Hashtable failures = new Hashtable();
+            List<ExportResult> exportResults = new List<ExportResult>();
 
             int currentFile = 1;
             foreach (string inputFile in fileList.Keys)
@@ -328,9 +412,11 @@ namespace Only_Skin_Deep
                 {
                     Directory.CreateDirectory(outFolder);
                 }
+
                 try
                 {
-                    LoadFile(inputFile);
+                    LoadTextures(inputFile, exportResults);
+
                     Thread exportThread = new Thread(ExportAll);
                     ExportParameters outParms = new ExportParameters();
                     outParms.Path = (string)fileList[inputFile];
@@ -344,11 +430,66 @@ namespace Only_Skin_Deep
                         Thread.Sleep(10);
                     }
                 }
-                catch (Exception ex)
-                {
-                    failures.Add(inputFile, ex.Message);
-                }
+                catch { }
+
                 currentFile++;
+            }
+
+            if (exportResults.Count > 0)
+            {
+                int noOfErrors = 0;
+                int noOfColourErrors = 0;
+                foreach (ExportResult exportResult in exportResults)
+                {
+                    if (exportResult.ResultType != ExportResultType.Success)
+                    {
+                        noOfErrors++;
+
+                        if (exportResult.FileType == FileType.Object)
+                        {
+                            noOfColourErrors++;
+                        }
+                    }
+                }
+
+                String summary = "Batch export completed with " + noOfErrors.ToString() + " errors.";
+                if (noOfColourErrors > 0)
+                {
+                    summary += " As a result, some textures may be shown in greyscale.";
+                }
+                summary += "\r\n\r\nView the logfile?";
+
+                DialogResult result =
+                    MessageBox.Show(summary, "Export Complete", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                if (result == DialogResult.Yes)
+                {
+                    int noOfAttempts = 0;
+                    while (noOfAttempts < 100)
+                    {
+                        DateTime date = DateTime.Now;
+                        String dateFormat = "yyyy-MM-dd-HH-mm-ss-fff-";
+                        String dateString = date.ToString(dateFormat);
+                        Random randomGen = new Random((int)date.Ticks);
+                        int randomVal = randomGen.Next();
+                        String logFileName = parms.outputFolder + "\\OnlySkinDeep-Log-" + dateString + randomVal.ToString("X8") + ".txt";
+                        try
+                        {
+                            StreamWriter logFile = File.CreateText(logFileName);
+                            foreach (ExportResult exportResult in exportResults)
+                            {
+                                logFile.WriteLine(exportResult.GetMessage());
+                            }
+                            logFile.Close();
+                            //System.Diagnostics.Process.Start("notepad.exe", logFileName);
+                            System.Diagnostics.Process.Start(logFileName);
+                            break;
+                        }
+                        catch
+                        {
+                            noOfAttempts++;
+                        }
+                    }
+                }
             }
         }
 
@@ -409,26 +550,18 @@ namespace Only_Skin_Deep
 
         protected void OpenFile(string path)
         {
-            directXView.PauseRendering = true;
-
-            bool openSuccess = true;
-            string failureReason = "";
-            try
-            {
-                LoadFile(path);
-            }
-            catch (Exception ex)
-            {
-                openSuccess = false;
-                failureReason = ex.Message;
-            }
+            List<ExportResult> exportResults = new List<ExportResult>();
+            LoadTextures(path, exportResults);
 
             lvTextureList.Items.Clear();
 
+            bool openSuccess = (exportResults.Count > 0 && exportResults[0].ResultType == ExportResultType.Success);
             if ((openSuccess) && (_File != null))
             {
+                btnSave.Enabled = true;
                 btnExportAll.Enabled = true;
                 btnExportCurrent.Enabled = true;
+                btnImportCurrent.Enabled = true;
                 exportAllToolStripMenuItem.Enabled = true;
                 txtInformation.Text = "File: " + _File.FilePath + Environment.NewLine +
                     "Type: " + _File.FileTypeName + Environment.NewLine +
@@ -447,48 +580,152 @@ namespace Only_Skin_Deep
                 }
 
                 lvTextureList.Items.AddRange(textureListEntries);
-                lvTextureList.SelectedIndices.Add(0);
+                lvTextureList.Select();
+                lvTextureList.Items[0].Selected = true;
+
+                String errorMessage = null;
+                foreach (ExportResult exportResult in exportResults)
+                {
+                    if (exportResult.ResultType == ExportResultType.Success)
+                    {
+                        continue;
+                    }
+
+                    if (errorMessage == null)
+                    {
+                        errorMessage = "Error importing colours. Some textures may be shown in greyscale.\r\n\r\n";
+                    }
+
+                    errorMessage += exportResult.GetMessage();
+                    errorMessage += "\r\n";
+                }
+
+                if (errorMessage != null)
+                {
+                    MessageBox.Show(errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                }
             }
             else
             {
+                btnSave.Enabled = false;
                 btnExportAll.Enabled = false;
+                btnExportCurrent.Enabled = false;
+                btnImportCurrent.Enabled = false;
                 exportAllToolStripMenuItem.Enabled = false;
                 txtInformation.Text = "";
-                MessageBox.Show("Only Skin Deep was unable to open the file you selected." + Environment.NewLine +
-                    failureReason);
+                pictureBox.Image = null;
+                String failureReason = (exportResults.Count > 0) ? exportResults[0].GetMessage() : "Unknown";
+                MessageBox.Show("Only Skin Deep was unable to open the file you selected.\r\n\r\n" +
+                    failureReason, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            lvTextureList.UpdateScrollBars();
 
-            directXView.PauseRendering = false;
+            lvTextureList.UpdateScrollBars();
         }
 
-        protected void LoadFile(string path)
+        protected void LoadTextures(String textureFileName, List<ExportResult> exportResults)
         {
-            CDT.TextureFileType type = CDT.TextureFile.GetFileType(path);
-
-            switch (type)
+            try
             {
-                case CDT.TextureFileType.SoulReaverPC:
-                    _File = new CDT.SoulReaverPCTextureFile(path);
-                    break;
-                case CDT.TextureFileType.SoulReaverDreamcast:
-                    _File = new CDT.SoulReaverDreamcastTextureFile(path);
-                    break;
-                case CDT.TextureFileType.SoulReaverPlaystation:
-                    _File = new CDT.SoulReaverPlaystationTextureFile(path);
-                    break;
-                case CDT.TextureFileType.SoulReaver2Playstation2:
-                    //throw new Exception("PS2 VRM files are not yet supported.");
-                    //_File = null;
-                    _File = new CDT.SoulReaver2PS2VRMTextureFile(path);
-                    break;
-                case CDT.TextureFileType.SoulReaver2PC:
-                    _File = new CDT.SoulReaver2PCVRMTextureFile(path);
-                    break;
-                default:
-                    NotifyNotSupported(path);
-                    _File = null;
-                    break;
+                CDT.TextureFileType type = CDT.TextureFile.GetFileType(textureFileName);
+
+                switch (type)
+                {
+                    case CDT.TextureFileType.SoulReaverPC:
+                        _File = new CDT.SoulReaverPCTextureFile(textureFileName);
+                        break;
+                    case CDT.TextureFileType.SoulReaverDreamcast:
+                        _File = new CDT.SoulReaverDreamcastTextureFile(textureFileName);
+                        break;
+                    case CDT.TextureFileType.SoulReaverPlaystation:
+                        _File = new CDT.SoulReaverPlaystationTextureFile(textureFileName);
+                        break;
+                    case CDT.TextureFileType.SoulReaver2Playstation2:
+                        _File = new CDT.SoulReaver2PS2VRMTextureFile(textureFileName);
+                        break;
+                    case CDT.TextureFileType.SoulReaver2PC:
+                        _File = new CDT.SoulReaver2PCVRMTextureFile(textureFileName);
+                        break;
+                    default:
+                        break;
+                }
+
+                if (type == CDT.TextureFileType.Unknown)
+                {
+                    ExportResult.AddToList(exportResults, ExportResultType.Invalid, FileType.Texture, textureFileName);
+                }
+                else
+                {
+                    ExportResult.AddToList(exportResults, ExportResultType.Success, FileType.Texture, textureFileName);
+
+                    if (type == CDT.TextureFileType.SoulReaverPlaystation)
+                    {
+                        try
+                        {
+                            String objectFileName = Path.GetDirectoryName(textureFileName) + @"\" +
+                                Path.GetFileNameWithoutExtension(textureFileName) + ".pcm";
+                            LoadColours(objectFileName, exportResults);
+                        }
+                        catch (Exception) { }
+                    }
+                }
+            }
+            catch
+            {
+                ExportResult.AddToList(exportResults, ExportResultType.Failure, FileType.Texture, textureFileName);
+            }
+        }
+
+        protected void LoadColours(String objectFileName, List<ExportResult> exportResults)
+        {
+            if (_File != null && _File.FileType == CDT.TextureFileType.SoulReaverPlaystation)
+            {
+                CDO.SR1File objectFile = null;
+                try
+                {
+                    objectFile = new CDO.SR1File(objectFileName);
+                    ExportResult.AddToList(exportResults, ExportResultType.Success, FileType.Object, objectFileName);
+                }
+                catch (FileNotFoundException)
+                {
+                    ExportResult.AddToList(exportResults, ExportResultType.Missing, FileType.Object, objectFileName);
+                }
+                catch
+                {
+                    ExportResult.AddToList(exportResults, ExportResultType.Failure, FileType.Object, objectFileName);
+                }
+
+                try
+                {
+                    int numPolygons = 0;
+                    foreach (CDM.SRModel model in objectFile.Models)
+                    {
+                        numPolygons += (int)model.PolygonCount;
+                    }
+
+                    int currentPolygon = 0;
+                    CDT_SRPSPolygonTextureData[] polygonData = new CDT_SRPSPolygonTextureData[numPolygons];
+                    foreach (CDM.SRModel model in objectFile.Models)
+                    {
+                        foreach (CDC.Polygon poly in model.Polygons)
+                        {
+                            polygonData[currentPolygon].paletteColumn = poly.paletteColumn;
+                            polygonData[currentPolygon].paletteRow = poly.paletteRow;
+                            polygonData[currentPolygon].u = new int[3];
+                            polygonData[currentPolygon].v = new int[3];
+                            polygonData[currentPolygon].u[0] = (int)(model.UVs[poly.v1.UVID].u * 255);
+                            polygonData[currentPolygon].u[1] = (int)(model.UVs[poly.v2.UVID].u * 255);
+                            polygonData[currentPolygon].u[2] = (int)(model.UVs[poly.v3.UVID].u * 255);
+                            polygonData[currentPolygon].v[0] = (int)(model.UVs[poly.v1.UVID].v * 255);
+                            polygonData[currentPolygon].v[1] = (int)(model.UVs[poly.v2.UVID].v * 255);
+                            polygonData[currentPolygon].v[2] = (int)(model.UVs[poly.v3.UVID].v * 255);
+                            polygonData[currentPolygon].textureID = poly.material.textureID;
+                            currentPolygon++;
+                        }
+                    }
+
+                    ((CDT_SRPSTextureFile)_File).CachePolygonData(polygonData);
+                }
+                catch (Exception) { }
             }
         }
 
@@ -550,6 +787,21 @@ namespace Only_Skin_Deep
             types.Add(crm);
 
             return types;
+        }
+
+        protected void SaveFile()
+        {
+            DialogResult result = new DialogResult();
+            SaveFileDialog oDialogue = new SaveFileDialog();
+            oDialogue.Filter = "Crystal Dynamics VRAM Data (*.vrm)|*.vrm|All Files (*.*)|*.*";
+            result = oDialogue.ShowDialog();
+            if (result == DialogResult.OK)
+            {
+                if (_File != null)
+                {
+                    _File.ExportArchiveFile(oDialogue.FileName);
+                }
+            }
         }
 
         // for debugging only
@@ -642,7 +894,7 @@ namespace Only_Skin_Deep
             {
                 parms = (ExportParameters)oParms;
             }
-            catch (InvalidCastException iEx)
+            catch (InvalidCastException)
             {
                 throw new InvalidCastException("Passed value must be an instance of ExportParameters.");
             }
@@ -688,7 +940,6 @@ namespace Only_Skin_Deep
                     break;
                 default:
                     throw new Exception("Only Skin Deep is unable to export from Unknown file types.");
-                    break;
             }
 
             Invoke(new MethodInvoker(DestroyProgressWindow));
@@ -696,6 +947,12 @@ namespace Only_Skin_Deep
 
         protected void ExportCurrentThreaded()
         {
+            if (lvTextureList.SelectedIndices == null)
+            {
+                MessageBox.Show("No texture has been selelected");
+                return;
+            }
+
             DialogResult result = new DialogResult();
             FolderBrowserDialog fDialogue = new FolderBrowserDialog();
             result = fDialogue.ShowDialog();
@@ -749,7 +1006,7 @@ namespace Only_Skin_Deep
             {
                 parms = (ExportParameters)oParms;
             }
-            catch (InvalidCastException iEx)
+            catch (InvalidCastException)
             {
                 throw new InvalidCastException("Passed value must be an instance of ExportParameters.");
             }
@@ -784,7 +1041,6 @@ namespace Only_Skin_Deep
                     break;
                 default:
                     throw new Exception("Only Skin Deep is unable to export from Unknown file types.");
-                    break;
             }
 
             Invoke(new MethodInvoker(DestroyProgressWindow));
@@ -981,52 +1237,6 @@ namespace Only_Skin_Deep
 
         protected void ExportAllSoulReaverPlaystation(string path, bool batchMode)
         {
-            string pcmFileName = Path.GetDirectoryName(_File.FilePath) + @"\" +
-                Path.GetFileNameWithoutExtension(_File.FilePath) + ".pcm";
-            CDT.SoulReaverPlaystationTextureFile pcm = (CDT.SoulReaverPlaystationTextureFile)_File;
-            bool usePolygonData = true;
-            CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[] gexPolygons =
-                new CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[0];
-            if (File.Exists(pcmFileName))
-            {
-                try
-                {
-                    AMEX.GexFile meshFile = new AMEX.GexFile(pcmFileName, AMF.ModelEx.GexModelType.SoulReaverPlaystation);
-                    // copy the polygon data for texturing
-                    gexPolygons =
-                        new CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[meshFile.polygonCount];
-                    int polyNum = 0;
-                    foreach (AMEX.ExPolygon poly in meshFile.polygons)
-                    {
-                        gexPolygons[polyNum].paletteColumn = poly.paletteColumn;
-                        gexPolygons[polyNum].paletteRow = poly.paletteRow;
-                        gexPolygons[polyNum].u = new int[3];
-                        gexPolygons[polyNum].v = new int[3];
-                        gexPolygons[polyNum].u[0] = (int)poly.v1.rawU;
-                        gexPolygons[polyNum].u[1] = (int)poly.v2.rawU;
-                        gexPolygons[polyNum].u[2] = (int)poly.v3.rawU;
-                        gexPolygons[polyNum].v[0] = (int)poly.v1.rawV;
-                        gexPolygons[polyNum].v[1] = (int)poly.v2.rawV;
-                        gexPolygons[polyNum].v[2] = (int)poly.v3.rawV;
-                        gexPolygons[polyNum].textureID = poly.material.textureID;
-                        polyNum++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    usePolygonData = false;
-                }
-            }
-            else
-            {
-                usePolygonData = false;
-            }
-            Console.WriteLine("Exporting " + _File.FilePath);
-            if (usePolygonData)
-            {
-                Console.WriteLine("Using PCM file " + pcmFileName);
-                pcm.BuildTexturesFromPolygonData(gexPolygons, false, true);
-            }
             for (int i = 0; i < _File.TextureCount; i++)
             {
                 int texNum = i + 1;
@@ -1199,52 +1409,6 @@ namespace Only_Skin_Deep
 
         protected void ExportSoulReaverPlaystation(string path, int index)
         {
-            string pcmFileName = Path.GetDirectoryName(_File.FilePath) + @"\" +
-                Path.GetFileNameWithoutExtension(_File.FilePath) + ".pcm";
-            CDT.SoulReaverPlaystationTextureFile pcm = (CDT.SoulReaverPlaystationTextureFile)_File;
-            bool usePolygonData = true;
-            CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[] gexPolygons =
-                new CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[0];
-            if (File.Exists(pcmFileName))
-            {
-                try
-                {
-                    AMEX.GexFile meshFile = new AMEX.GexFile(pcmFileName, AMF.ModelEx.GexModelType.SoulReaverPlaystation);
-                    // copy the polygon data for texturing
-                    gexPolygons =
-                        new CDT.SoulReaverPlaystationTextureFile.SoulReaverPlaystationPolygonTextureData[meshFile.polygonCount];
-                    int polyNum = 0;
-                    foreach (AMEX.ExPolygon poly in meshFile.polygons)
-                    {
-                        gexPolygons[polyNum].paletteColumn = poly.paletteColumn;
-                        gexPolygons[polyNum].paletteRow = poly.paletteRow;
-                        gexPolygons[polyNum].u = new int[3];
-                        gexPolygons[polyNum].v = new int[3];
-                        gexPolygons[polyNum].u[0] = (int)poly.v1.rawU;
-                        gexPolygons[polyNum].u[1] = (int)poly.v2.rawU;
-                        gexPolygons[polyNum].u[2] = (int)poly.v3.rawU;
-                        gexPolygons[polyNum].v[0] = (int)poly.v1.rawV;
-                        gexPolygons[polyNum].v[1] = (int)poly.v2.rawV;
-                        gexPolygons[polyNum].v[2] = (int)poly.v3.rawV;
-                        gexPolygons[polyNum].textureID = poly.material.textureID;
-                        polyNum++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    usePolygonData = false;
-                }
-            }
-            else
-            {
-                usePolygonData = false;
-            }
-            Console.WriteLine("Exporting " + _File.FilePath);
-            if (usePolygonData)
-            {
-                Console.WriteLine("Using PCM file " + pcmFileName);
-                pcm.BuildTexturesFromPolygonData(gexPolygons, false, true);
-            }
             int texNum = index + 1;
             _ProgressWindow.SetMessage("Exporting Texture " + texNum.ToString() + " of " + _File.TextureCount.ToString());
             string outPath = path + @"\" + _File.GetTextureName(index) + ".png";
@@ -1271,6 +1435,27 @@ namespace Only_Skin_Deep
             }
         }
 
+        protected void ImportCurrent()
+        {
+            if (lvTextureList.SelectedIndices == null)
+            {
+                MessageBox.Show("No texture has been selelected");
+                return;
+            }
+
+            DialogResult result = new DialogResult();
+            OpenFileDialog oDialogue = new OpenFileDialog();
+            oDialogue.Multiselect = false;
+            oDialogue.Filter = "DirectDraw Surface (*.dds)|*.dds|All Files (*.*)|*.*";
+            result = oDialogue.ShowDialog();
+            if (result == DialogResult.OK)
+            {
+                if (_File != null)
+                {
+                    _File.ImportFile(lvTextureList.SelectedIndices[0], oDialogue.FileName);
+                }
+            }
+        }
         #endregion
     }
 }

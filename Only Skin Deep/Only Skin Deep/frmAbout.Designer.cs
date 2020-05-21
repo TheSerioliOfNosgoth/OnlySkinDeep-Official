@@ -82,7 +82,7 @@ namespace Only_Skin_Deep
             this.lblCreator.Name = "lblCreator";
             this.lblCreator.Size = new System.Drawing.Size(502, 23);
             this.lblCreator.TabIndex = 25;
-            this.lblCreator.Text = "Copyright 2007-2014 Ben Lincoln and Andrew Fradley";
+            this.lblCreator.Text = "Copyright 2007-2013 Ben Lincoln and Andrew Fradley";
             this.lblCreator.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // lblVersion

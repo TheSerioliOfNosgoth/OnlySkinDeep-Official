@@ -49,6 +49,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
         public VRMFormat Format;
         public VRMPaletteDefinition Palette;
         public VRMSubTextureDefinition[] SubTextures;
+        public String NewTexturePath;
     }
 
     public struct VRMPaletteDefinition
@@ -159,7 +160,6 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             {
                 throw new TextureFileException("Error reading file '" + path + "' to determine type.", ex);
             }
-            return TextureFileType.SoulReaver2PC;
         }
     }
 }

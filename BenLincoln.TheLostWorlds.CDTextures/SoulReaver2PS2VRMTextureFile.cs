@@ -1,5 +1,5 @@
 // BenLincoln.TheLostWorlds.CDTextures
-// Copyright 2007-2014 Ben Lincoln
+// Copyright 2007-2012 Ben Lincoln
 // http://www.thelostworlds.net/
 //
 
@@ -114,15 +114,14 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                             _TextureDefinitions[textureNum].Format = VRMFormat.PS2_ARGB;
                             break;
                         case 2:
-                        // 6 seems to work too for PAL Raziel.
-                        // Fallthrough.
+                            // 6 seems to work too for PAL Raziel.
+                            // Fallthrough.
                         case 6:
                             _TextureDefinitions[textureNum].Format = VRMFormat.PS2_8Bit_Indexed;
                             break;
                         default:
                             throw new NotImplementedException("Support for type '" + _TextureDefinitions[textureNum].Type.ToString() +
                                 "' files is not yet implemented.");
-                            break;
                     }
                     ushort val4 = iReader.ReadUInt16();
                     ushort val5 = iReader.ReadUInt16();
@@ -272,7 +271,6 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                         default:
                             throw new NotImplementedException("Support for type '" + _TextureDefinitions[textureNum].Type.ToString() +
                                 "' files is not yet implemented.");
-                            break;
                     }
                     ushort val4 = iReader.ReadUInt16();
                     ushort val5 = iReader.ReadUInt16();
@@ -376,7 +374,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             BinaryReader iReader = new BinaryReader(iStream);
             for (int i = 0; i <= _TextureDefinitions.GetUpperBound(0); i++)
             {
-                switch (_TextureDefinitions[i].Format)
+                switch(_TextureDefinitions[i].Format)
                 {
                     case VRMFormat.PS2_8Bit_Indexed:
                         FileStream oStream = new FileStream(outFolder + @"\Texture-" + String.Format("{0:0000}", i) + "-" +
@@ -384,7 +382,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                             "Type_" + String.Format("{0:X4}", _TextureDefinitions[i].Type) + "-" +
                             String.Format("{0:0000}", _TextureDefinitions[i].Width) + "x" +
                             String.Format("{0:0000}", _TextureDefinitions[i].Height) + "-" +
-                            "Palette-" +
+                            "Palette-" + 
                             "BPP_" + String.Format("{0:X4}", _TextureDefinitions[i].Palette.BPP.ToString()) + "-" +
                             "Offset_" + String.Format("{0:00000000}", _TextureDefinitions[i].Palette.Offset) +
                             ".dat",
@@ -409,12 +407,12 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                         "Offset_" + String.Format("{0:00000000}", _TextureDefinitions[i].Offset) + "-" +
                         "Type_" + String.Format("{0:X4}", _TextureDefinitions[i].Type) + "-" +
                         String.Format("{0:0000}", _TextureDefinitions[i].Width) + "x" +
-                        String.Format("{0:0000}", _TextureDefinitions[i].Height) + "-" +
+                        String.Format("{0:0000}", _TextureDefinitions[i].Height) + "-" + 
                         "MipMap-" + String.Format("{0:00}", j) + "-" +
                         String.Format("{0:0000}", _TextureDefinitions[i].SubTextures[j].Width) + "x" +
-                        String.Format("{0:0000}", _TextureDefinitions[i].SubTextures[j].Height) + "-" +
+                        String.Format("{0:0000}", _TextureDefinitions[i].SubTextures[j].Height) + "-" + 
                         "Type_" + String.Format("{0:X4}", _TextureDefinitions[i].SubTextures[j].Type) + "-" +
-                        "Offset_" + String.Format("{0:00000000}", _TextureDefinitions[i].SubTextures[j].Offset) +
+                        "Offset_" + String.Format("{0:00000000}", _TextureDefinitions[i].SubTextures[j].Offset) + 
                         ".dat",
                         FileMode.Create, FileAccess.Write);
                     BinaryWriter oWriter = new BinaryWriter(oStream);
@@ -445,7 +443,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                 ArrayList parmList = (ArrayList)parms;
                 ExportFile((int)parmList[0], (int)parmList[1], (string)parmList[2]);
             }
-            catch (InvalidCastException ex)
+            catch (InvalidCastException)
             {
                 throw new InvalidCastException("Passed object must be an arraylist with the first and second elements being an int and the third a string.");
             }
@@ -468,13 +466,10 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             {
                 case VRMFormat.PS2_8Bit_Indexed:
                     return _GetIndexedTextureAsBitmap(index, mipMapNumber);
-                    break;
                 case VRMFormat.PS2_ARGB:
                     return _GetARGBTextureAsBitmap(index, mipMapNumber);
-                    break;
                 default:
                     throw new NotImplementedException();
-                    break;
             }
         }
 
@@ -498,37 +493,37 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             iStream.Seek(_TextureDefinitions[index].Palette.Offset + _SubTextureHeaderLength, SeekOrigin.Begin);
             for (int i = 0; i <= tempPalette.GetUpperBound(0); i++)
             {
-                int alpha = 0;
-                int red = 0;
-                int green = 0;
-                int blue = 0;
-                switch (_TextureDefinitions[index].Palette.BPP)
-                {
-                    case 16:
-                        ushort cData = iReader.ReadUInt16();
-                        alpha = cData;
-                        red = cData;
-                        green = cData;
-                        blue = cData;
+                    int alpha = 0;
+                    int red = 0;
+                    int green = 0;
+                    int blue = 0;
+                    switch (_TextureDefinitions[index].Palette.BPP)
+                    {
+                        case 16:
+                            ushort cData = iReader.ReadUInt16();
+                            alpha = cData;
+                            red = cData;
+                            green = cData;
+                            blue = cData;
 
-                        //alpha = ((alpha & 0x8000) >> 15) << 7;
-                        alpha = 255;
-                        red = ((red & 0x1F)) << 3;
-                        green = ((green & 0x3E0) >> 5) << 3;
-                        blue = ((blue & 0x7C00) >> 10) << 3;
-                        break;
-                    case 32:
-                        red = iReader.ReadByte();
-                        green = iReader.ReadByte();
-                        blue = iReader.ReadByte();
-                        alpha = iReader.ReadByte();
-                        if (alpha != 0)
-                        {
+                            //alpha = ((alpha & 0x8000) >> 15) << 7;
                             alpha = 255;
-                        }
-                        break;
-                }
-                tempPalette[i] = Color.FromArgb(alpha, red, green, blue);
+                            red = ((red & 0x1F)) << 3;
+                            green = ((green & 0x3E0) >> 5) << 3;
+                            blue = ((blue & 0x7C00) >> 10) << 3;
+                            break;
+                        case 32:
+                            red = iReader.ReadByte();
+                            green = iReader.ReadByte();
+                            blue = iReader.ReadByte();
+                            alpha = iReader.ReadByte();
+                            if (alpha != 0)
+                            {
+                                alpha = 255;
+                            }
+                            break;
+                    }
+                    tempPalette[i] = Color.FromArgb(alpha, red, green, blue);
             }
 
             int[] clutMap = BLPS2.PS2ImageData.BuildIDTex8ClutIndex();
@@ -544,7 +539,7 @@ namespace BenLincoln.TheLostWorlds.CDTextures
             Bitmap image = new Bitmap(width, height);
 
             iStream.Seek(_TextureDefinitions[index].SubTextures[mipMapNumber].Offset + _SubTextureHeaderLength, SeekOrigin.Begin);
-            byte[] rawData = iReader.ReadBytes((int)(_TextureDefinitions[index].SubTextures[mipMapNumber].Length -
+            byte[] rawData = iReader.ReadBytes((int)(_TextureDefinitions[index].SubTextures[mipMapNumber].Length - 
                 _SubTextureHeaderLength));
             iReader.Close();
             iStream.Close();

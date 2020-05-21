@@ -53,10 +53,6 @@ namespace BenLincoln.TheLostWorlds.CDTextures
                 throw new TextureFileException("An index was specified which resulted in an offset greater " +
                     "than the maximum allowed value.");
             }
-            int width = 256;
-            int height = 256;
-            FileStream fStream;
-            BinaryReader bReader;
             ushort[] codeBook;
             byte[] imageData;
 

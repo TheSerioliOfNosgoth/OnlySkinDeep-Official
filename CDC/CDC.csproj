@@ -8,8 +8,8 @@
     <ProjectGuid>{C88B1CA5-7C14-43D3-94AB-D627A649C35A}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>AMF.ModelEx</RootNamespace>
-    <AssemblyName>AMF.ModelEx</AssemblyName>
+    <RootNamespace>CDC</RootNamespace>
+    <AssemblyName>CDC</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -57,14 +57,23 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GexFile.cs" />
+    <Compile Include="CDC.cs" />
+    <Compile Include="Models\DefianceModel.cs" />
+    <Compile Include="Models\DefianceObjectModel.cs" />
+    <Compile Include="Models\DefianceUnitModel.cs" />
+    <Compile Include="Models\SR1Model.cs" />
+    <Compile Include="Models\SR1ObjectModel.cs" />
+    <Compile Include="Models\SR1UnitModel.cs" />
+    <Compile Include="Models\SR2Model.cs" />
+    <Compile Include="Models\SR2ObjectModel.cs" />
+    <Compile Include="Models\SR2UnitModel.cs" />
+    <Compile Include="Models\SRModel.cs" />
+    <Compile Include="Objects\DefianceFile.cs" />
+    <Compile Include="Objects\SR1File.cs" />
+    <Compile Include="Objects\SR2File.cs" />
+    <Compile Include="Objects\SRFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\BenLincoln.TheLostWorlds.CDTextures\BenLincoln.TheLostWorlds.CDTextures.csproj">
-      <Project>{A4587DBF-C10E-44DB-BF51-C1ABF426FA13}</Project>
-      <Name>BenLincoln.TheLostWorlds.CDTextures</Name>
-    </ProjectReference>
+    <Compile Include="Utility.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
