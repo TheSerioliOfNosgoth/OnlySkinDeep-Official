@@ -88,11 +88,12 @@ namespace CDC
         public int colourID;            // Index of the vertex colour
         public int UVID;                // Index of the vertex UV
         public int boneID;              // Index of the vertex bone influence
+        public Boolean isExtraGeometry; // Is part of the extra geometry (Should be in the polygon or mesh, but need to refactor)
     }
 
     public struct ShiftVertex
     {
-        public UInt16 index;            // Index in the file
+        public UInt16 index;          // Index in the file
         public Vector basePos;        // Base vertex coordinates
         public Vector offset;         // Offset from base coordinates
     }
@@ -101,8 +102,15 @@ namespace CDC
     {
         public Material material;     // The material used
         public Vertex v1, v2, v3;     // Vertices for the polygon
-        public int paletteRow;          // The row of the pallete to use (PS1)
-        public int paletteColumn;       // The column of the pallet to use (PS1)
+        public int paletteRow;        // The row of the pallete to use (PS1)
+        public int paletteColumn;     // The column of the pallet to use (PS1)
+    }
+
+    public struct TreePolygon
+    {
+        public UInt32 textureID;
+        public UInt16 v1, v2, v3;
+        public bool useExtraGeometry;
     }
 
     public class Material
@@ -241,5 +249,17 @@ namespace CDC
         public UInt32 startIndex;
         public Vertex[] vertices;
         public Polygon[] polygons;
+    }
+
+    public class Geometry
+    {
+        public Vertex[] Vertices;
+        public Vector[] PositionsRaw;
+        public Vector[] PositionsPhys;
+        public Vector[] PositionsAltPhys;
+        public Vector[] Normals;
+        public UInt32[] Colours;
+        public UInt32[] ColoursAlt;
+        public UV[] UVs;
     }
 }

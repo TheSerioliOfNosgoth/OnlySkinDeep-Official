@@ -264,6 +264,9 @@ namespace CDC.Objects.Models
         };
         #endregion
 
+        protected UInt32 _extraVertexCount;
+        protected UInt32 _extraVertexStart;
+
         protected class DefianceTriangleList
         {
             public Material m_xMaterial;
@@ -281,23 +284,33 @@ namespace CDC.Objects.Models
         protected virtual void ReadData(BinaryReader xReader)
         {
             // Get the normals
-            _normals = new Vector[s_aiNormals.Length / 3];
-            for (int n = 0; n < _normals.Length; n++)
+            _geometry.Normals = new Vector[s_aiNormals.Length / 3];
+            for (int n = 0; n < _geometry.Normals.Length; n++)
             {
-                _normals[n].x = s_aiNormals[n, 0];
-                _normals[n].y = s_aiNormals[n, 1];
-                _normals[n].z = s_aiNormals[n, 2];
+                _geometry.Normals[n].x = s_aiNormals[n, 0];
+                _geometry.Normals[n].y = s_aiNormals[n, 1];
+                _geometry.Normals[n].z = s_aiNormals[n, 2];
             }
 
             // Get the vertices
-            _vertices = new Vertex[_vertexCount];
-            _positionsRaw = new Vector[_vertexCount];
-            _positionsPhys = new Vector[_vertexCount];
-            _positionsAltPhys = new Vector[_vertexCount];
-            _colours = new UInt32[_vertexCount];
-            _coloursAlt = new UInt32[_vertexCount];
-            _uvs = new UV[_vertexCount];
-            ReadVertices(xReader);
+            _geometry.Vertices = new Vertex[_vertexCount];
+            _geometry.PositionsRaw = new Vector[_vertexCount];
+            _geometry.PositionsPhys = new Vector[_vertexCount];
+            _geometry.PositionsAltPhys = new Vector[_vertexCount];
+            _geometry.Colours = new UInt32[_vertexCount];
+            _geometry.ColoursAlt = new UInt32[_vertexCount];
+            _geometry.UVs = new UV[_vertexCount];
+            ReadTypeAVertices(xReader);
+
+            // Get the extra vertices
+            _extraGeometry.Vertices = new Vertex[_extraVertexCount];
+            _extraGeometry.PositionsRaw = new Vector[_extraVertexCount];
+            _extraGeometry.PositionsPhys = new Vector[_extraVertexCount];
+            _extraGeometry.PositionsAltPhys = new Vector[_extraVertexCount];
+            _extraGeometry.Colours = new UInt32[_extraVertexCount];
+            _extraGeometry.ColoursAlt = new UInt32[_extraVertexCount];
+            _extraGeometry.UVs = new UV[_extraVertexCount];
+            ReadTypeBVertices(xReader);
 
             // Get the polygons
             _polygons = new Polygon[_polygonCount];
@@ -307,18 +320,18 @@ namespace CDC.Objects.Models
             GenerateOutput();
         }
 
-        protected virtual void ReadVertex(BinaryReader xReader, int v)
+        protected virtual void ReadTypeAVertex(BinaryReader xReader, int v)
         {
-            _vertices[v].positionID = v;
+            _geometry.Vertices[v].positionID = v;
 
             // Read the local coordinates
-            _positionsRaw[v].x = (float)xReader.ReadInt16();
-            _positionsRaw[v].y = (float)xReader.ReadInt16();
-            _positionsRaw[v].z = (float)xReader.ReadInt16();
+            _geometry.PositionsRaw[v].x = (float)xReader.ReadInt16();
+            _geometry.PositionsRaw[v].y = (float)xReader.ReadInt16();
+            _geometry.PositionsRaw[v].z = (float)xReader.ReadInt16();
             xReader.BaseStream.Position += 0x02;
         }
 
-        protected virtual void ReadVertices(BinaryReader xReader)
+        protected virtual void ReadTypeAVertices(BinaryReader xReader)
         {
             if (_vertexStart == 0 || _vertexCount == 0)
             {
@@ -329,7 +342,35 @@ namespace CDC.Objects.Models
 
             for (int v = 0; v < _vertexCount; v++)
             {
-                ReadVertex(xReader, v);
+                ReadTypeAVertex(xReader, v);
+            }
+
+            return;
+        }
+
+        protected virtual void ReadTypeBVertex(BinaryReader xReader, int v)
+        {
+            _extraGeometry.Vertices[v].positionID = v;
+
+            // Read the local coordinates
+            _extraGeometry.PositionsRaw[v].x = (float)xReader.ReadInt16();
+            _extraGeometry.PositionsRaw[v].y = (float)xReader.ReadInt16();
+            _extraGeometry.PositionsRaw[v].z = (float)xReader.ReadInt16();
+            xReader.BaseStream.Position += 0x02;
+        }
+
+        protected virtual void ReadTypeBVertices(BinaryReader xReader)
+        {
+            if (_extraVertexStart == 0 || _extraVertexCount == 0)
+            {
+                return;
+            }
+
+            xReader.BaseStream.Position = _extraVertexStart;
+
+            for (int v = 0; v < _extraVertexCount; v++)
+            {
+                ReadTypeBVertex(xReader, v);
             }
 
             return;
@@ -340,12 +381,12 @@ namespace CDC.Objects.Models
         protected virtual void GenerateOutput()
         {
             // Make the vertices unique
-            _vertices = new Vertex[_indexCount];
+            _geometry.Vertices = new Vertex[_indexCount];
             for (UInt32 p = 0; p < _polygonCount; p++)
             {
-                _vertices[(3 * p) + 0] = _polygons[p].v1;
-                _vertices[(3 * p) + 1] = _polygons[p].v2;
-                _vertices[(3 * p) + 2] = _polygons[p].v3;
+                _geometry.Vertices[(3 * p) + 0] = _polygons[p].v1;
+                _geometry.Vertices[(3 * p) + 1] = _polygons[p].v2;
+                _geometry.Vertices[(3 * p) + 2] = _polygons[p].v3;
             }
 
             // Build the materials array

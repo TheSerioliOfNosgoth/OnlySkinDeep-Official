@@ -663,6 +663,13 @@ namespace Only_Skin_Deep
                         {
                             String objectFileName = Path.GetDirectoryName(textureFileName) + @"\" +
                                 Path.GetFileNameWithoutExtension(textureFileName) + ".pcm";
+
+                            if (!File.Exists(objectFileName))
+                            {
+                                objectFileName = Path.GetDirectoryName(textureFileName) + @"\" +
+                                Path.GetFileNameWithoutExtension(textureFileName) + ".drm";
+                            }
+
                             LoadColours(objectFileName, exportResults);
                         }
                         catch (Exception) { }
@@ -712,12 +719,12 @@ namespace Only_Skin_Deep
                             polygonData[currentPolygon].paletteRow = poly.paletteRow;
                             polygonData[currentPolygon].u = new int[3];
                             polygonData[currentPolygon].v = new int[3];
-                            polygonData[currentPolygon].u[0] = (int)(model.UVs[poly.v1.UVID].u * 255);
-                            polygonData[currentPolygon].u[1] = (int)(model.UVs[poly.v2.UVID].u * 255);
-                            polygonData[currentPolygon].u[2] = (int)(model.UVs[poly.v3.UVID].u * 255);
-                            polygonData[currentPolygon].v[0] = (int)(model.UVs[poly.v1.UVID].v * 255);
-                            polygonData[currentPolygon].v[1] = (int)(model.UVs[poly.v2.UVID].v * 255);
-                            polygonData[currentPolygon].v[2] = (int)(model.UVs[poly.v3.UVID].v * 255);
+                            polygonData[currentPolygon].u[0] = (int)(model.Geometry.UVs[poly.v1.UVID].u * 255);
+                            polygonData[currentPolygon].u[1] = (int)(model.Geometry.UVs[poly.v2.UVID].u * 255);
+                            polygonData[currentPolygon].u[2] = (int)(model.Geometry.UVs[poly.v3.UVID].u * 255);
+                            polygonData[currentPolygon].v[0] = (int)(model.Geometry.UVs[poly.v1.UVID].v * 255);
+                            polygonData[currentPolygon].v[1] = (int)(model.Geometry.UVs[poly.v2.UVID].v * 255);
+                            polygonData[currentPolygon].v[2] = (int)(model.Geometry.UVs[poly.v3.UVID].v * 255);
                             polygonData[currentPolygon].textureID = poly.material.textureID;
                             currentPolygon++;
                         }
